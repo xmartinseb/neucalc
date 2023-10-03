@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::Display};
+use std::error::Error;
 
 /// Makro převede text typu &str na strukturu String
 #[macro_export]
@@ -31,7 +31,7 @@ macro_rules! sprint {
 #[macro_export]
 macro_rules! sprintln {
     ($expr:tt) => {
-       println!("{}", $expr);
+       println!("{}", $expr)
     }
 }
 

@@ -1,6 +1,4 @@
-use std::cell::Cell;
 use std::io;
-use std::io::Write;
 use std::panic::catch_unwind;
 use crate::calc_strategies::recursive_scan_strategy::RecursiveScanStrategy;
 use crate::calculator::Calculator;
@@ -12,7 +10,7 @@ mod calculator;
 
 fn main() {
     let calculator = Calculator::<RecursiveScanStrategy>::new();
-    let mut stdin = io::stdin();
+    let stdin = io::stdin();
 
     loop {
         let operation_result = catch_unwind(|| {
@@ -27,7 +25,6 @@ fn main() {
                 return false;
             } else {
                 let calc_result = calculator.evaluate_expr(&input);
-                //println!("{:?}", math_tree_result);
                 match calc_result {
                     Ok(result) => sprintln!(result),
                     Err(err) => println!("Chyba: {}", err.get_msg()),

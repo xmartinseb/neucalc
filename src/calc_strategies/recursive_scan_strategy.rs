@@ -149,7 +149,7 @@ fn trim_brackets(expr: &str) -> &str {
 fn check_brackets_simple(expr: &str) -> bool {
     let mut le = 0;
     let mut ri = 0;
-    for (i, c) in expr.chars().enumerate() {
+    for c in expr.chars() {
         if c == '(' {
             le += 1;
         } else if c == ')' {

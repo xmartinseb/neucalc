@@ -316,11 +316,6 @@ impl Add<Value> for Value {
 
 impl Value {
     pub fn pow(self, rhs: &Value) -> Result<Value, MathEvaluateError> {
-        // // Vnitrni pomocna funkce
-        // fn powf_or_powi<TNum>(val: &Value, exponent: TNum) -> Result<Value, MathEvaluateError>{
-        //     todo!()
-        // }
-
         match self {
             Value::Nothing => Ok(Value::Nothing),
             Value::Integer(x) => match rhs {
