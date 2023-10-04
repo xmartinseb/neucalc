@@ -17,10 +17,39 @@ pub enum Value {
     Bool(bool),
 }
 
+
+/// Platné konstanty
+pub mod consts {
+    use crate::calc_base::value::Value;
+
+    pub static PI: Value = Value::Real(std::f64::consts::PI);
+    pub static E: Value = Value::Real(std::f64::consts::E);
+    pub static SQRT2: Value = Value::Real(std::f64::consts::SQRT_2);
+    pub static SQRT3: Value = Value::Real(1.73205080756887729352744634150587236694280525381038);
+    pub static I64MAX: Value = Value::Integer(i64::MAX);
+    pub static I64MIN: Value = Value::Integer(i64::MIN);
+}
+
+/// Pokud je name platný název konstanty, vrátí se její hodnota, jinak se vrátí None
+fn is_named_const(name: &str) -> Option<Value> {
+    return match name.trim().to_lowercase().as_str() {
+        "pi" => Some(consts::PI.clone()),
+        "e" => Some(consts::E.clone()),
+        "sqrt2" => Some(consts::SQRT2.clone()),
+        "sqrt3" => Some(consts::SQRT3.clone()),
+        "i64max" => Some(consts::I64MAX.clone()),
+        "i64min" => Some(consts::I64MIN.clone()),
+        _ => None
+    };
+}
+
 impl Value {
     pub fn parse(value: &str) -> Result<Self, MathEvaluateError> {
         let value = value.trim();
-        if let Ok(boolean) = value.parse::<bool>() {
+        if let Some(val_const) = is_named_const(value){
+            return Ok(val_const);
+        }
+        else if let Ok(boolean) = value.parse::<bool>() {
             return Ok(Value::Bool(boolean));
         }else if let Ok(integer) = value.parse::<Integer>() {
             return Ok(Value::Integer(integer));
