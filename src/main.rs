@@ -1,5 +1,6 @@
 use std::io;
 use std::panic::catch_unwind;
+use crate::calc_base::value::Value;
 use crate::calc_strategies::recursive_scan_strategy::RecursiveScanStrategy;
 use crate::calculator::Calculator;
 
@@ -26,7 +27,33 @@ fn main() {
             } else {
                 let calc_result = calculator.evaluate_expr(&input);
                 match calc_result {
-                    Ok(result) => sprintln!(result),
+                    Ok(result) => {
+                        if let Value::Rational(ratio) = result.clone() {
+                            if let Some(ratio_as_int) = ratio.to_bigint(){
+                                // Zlomek je vlastně celé číslo
+                                let as_int = Value::BigInt(ratio_as_int);
+                                sprintln!(as_int);
+                            } else {
+                                // Zlomek se pro přehlednost vypíše i jako zlomek, i jako reálné číslo
+                                sprintln!(result);
+                                if let Some(real) = ratio.to_real() {
+                                    let as_real = Value::Real(real);
+                                    sprintln!(as_real);
+                                }
+                            }
+                        } else {
+                            sprintln!(result);
+                        }
+
+                        // sprintln!(result);
+                        // // Zlomek se pro přehlednost vypíše i jako zlomek, i jako reálné číslo
+                        // if let Value::Rational(ratio) = result {
+                        //     if let Some(real) = ratio.to_real() {
+                        //         let as_real = Value::Real(real);
+                        //         sprintln!(as_real);
+                        //     }
+                        // }
+                    },
                     Err(err) => println!("Chyba: {}", err.get_msg()),
                 }
             }

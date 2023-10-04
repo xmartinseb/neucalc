@@ -1,6 +1,8 @@
 use std::fmt::Display;
 use std::ops::{Add, Sub};
 use crate::calc_base::*;
+use crate::calc_base::rational::Rational;
+use crate::s;
 
 /// Hodnota, se kterou se pracuje při výpočtu matematického výrazu, může mít různé typy.
 /// Jsou na ní definovány matematické operace +,-,*,/, pow
@@ -8,6 +10,7 @@ use crate::calc_base::*;
 pub enum Value {
     Nothing,
     Integer(Integer),
+    BigInt(BigInteger),
     Rational(Rational),
     Real(Real),
     Text(String),
@@ -21,10 +24,10 @@ impl Value {
             return Ok(Value::Bool(boolean));
         }else if let Ok(integer) = value.parse::<Integer>() {
             return Ok(Value::Integer(integer));
+        } else if let Ok(biginteger) = value.parse::<BigInteger>() {
+            return Ok(Value::BigInt(biginteger));
         } else if let Ok(real) = value.parse::<Real>() {
             return Ok(Value::Real(real));
-        } else if let Ok(rational) = value.parse::<Rational>() {
-            return Ok(Value::Rational(rational));
         }
         Err(MathEvaluateError::new(format!("Výraz '{value}' není platná hodnota.")))
     }
@@ -41,6 +44,7 @@ impl Display for Value {
         match self {
             Value::Nothing => write!(f, "{}", "{}"),
             Value::Integer(x) => write!(f, "{x}\t(integer)"),
+            Value::BigInt(x) => write!(f, "{x}\t(big integer)"),
             Value::Rational(x) => write!(f, "{x}\t(rational)"),
             Value::Real(x) => write!(f, "{x}\t(real)"),
             Value::Text(x) => write!(f, "\"{x}\""),
@@ -56,6 +60,7 @@ impl std::ops::Neg for Value {
         return match self {
             Value::Nothing => Ok(Value::Nothing),
             Value::Integer(x) => Ok(Value::Integer(-x)),
+            Value::BigInt(x) => Ok(Value::BigInt(-x)),
             Value::Rational(x) => Ok(Value::Rational(-x)),
             Value::Real(x) => Ok(Value::Real(-x)),
             Value::Text(x) => Err(MathEvaluateError::new(format!(
@@ -77,7 +82,8 @@ impl Sub<Value> for Value {
             Value::Integer(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
                 Value::Integer(y) => Ok(Value::Integer(x - y)),
-                Value::Rational(y) => Ok(Value::Rational(x as Rational - y)),
+                Value::BigInt(y) => Ok(Value::BigInt(BigInt::from(x) - y)),
+                Value::Rational(y) => Ok(Value::Rational(Rational::from_int(x) - y)),
                 Value::Real(y) => Ok(Value::Real(x as Real - y)),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze odčítat celé číslo {x} a text {y}"
@@ -86,11 +92,25 @@ impl Sub<Value> for Value {
                     "Nelze odčítat celé číslo {x} a boolean {y}"
                 ))),
             },
+            Value::BigInt(x) => match rhs {
+                Value::Nothing => Ok(Value::Nothing),
+                Value::Integer(y) => Ok(Value::BigInt(x - BigInteger::from(y))),
+                Value::BigInt(y) => Ok(Value::BigInt(x - y)),
+                Value::Rational(y) => Ok(Value::Rational(Rational::from_bigint(x) - y)),
+                Value::Real(y) => Ok(Value::Real(bi_to_real(&x)? - y)),
+                Value::Text(y) => Err(MathEvaluateError::new(format!(
+                    "Nelze odčítat velké celé číslo {x} a text {y}"
+                ))),
+                Value::Bool(y) => Err(MathEvaluateError::new(format!(
+                    "Nelze odčítat velké celé číslo {x} a boolean {y}"
+                ))),
+            },
             Value::Rational(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
-                Value::Integer(y) => Ok(Value::Rational(x - y as Rational)),
+                Value::Integer(y) => Ok(Value::Rational(x - Rational::from_int(y))),
+                Value::BigInt(y) => Ok(Value::Rational(x - Rational::from_bigint(y))),
                 Value::Rational(y) => Ok(Value::Rational(x - y)),
-                Value::Real(y) => Ok(Value::Real(x as Real - y)),
+                Value::Real(y) => Ok(Value::Real(to_real(&x)?  - y)),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze odčítat racionální číslo {x} a text {y}"
                 ))),
@@ -101,7 +121,8 @@ impl Sub<Value> for Value {
             Value::Real(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
                 Value::Integer(y) => Ok(Value::Real(x - y as Real)),
-                Value::Rational(y) => Ok(Value::Real(x - y as Real)),
+                Value::BigInt(y) => Ok(Value::Real(x - bi_to_real(&y)? )),
+                Value::Rational(y) => Ok(Value::Real(x - to_real(&y)? )),
                 Value::Real(y) => Ok(Value::Real(x - y)),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze odčítat reálné číslo {x} a text {y}"
@@ -120,6 +141,20 @@ impl Sub<Value> for Value {
     }
 }
 
+fn to_real(q: &Rational) -> Result<Real, MathEvaluateError> {
+    return match q.to_real() {
+        None => {Err(MathEvaluateError::new(format!("Zlomek '{q}' se nepodařilo převést na reálné číslo")))}
+        Some(r) => {Ok(r)}
+    }
+}
+
+fn bi_to_real(q: &BigInteger) -> Result<Real, MathEvaluateError> {
+    return match q.to_string().parse::<Real>().ok() {
+        None => {Err(MathEvaluateError::new(format!("Velké celé číslo '{q}' se nepodařilo převést na reálné číslo")))}
+        Some(r) => {Ok(r)}
+    }
+}
+
 impl std::ops::Div<Value> for Value {
     type Output = Result<Value, MathEvaluateError>;
 
@@ -128,8 +163,9 @@ impl std::ops::Div<Value> for Value {
             Value::Nothing => Ok(Value::Nothing),
             Value::Integer(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
-                Value::Integer(y) => Ok(Value::Rational(x as Rational / y as Rational)),
-                Value::Rational(y) => Ok(Value::Rational(x as Rational / y)),
+                Value::Integer(y) => Ok(div_ints(x, y)), // Dělení celých čísel může vrátit zlomek, nebo i celé číslo!
+                Value::BigInt(y) => Ok(div_big_ints(&BigInteger::from(x), &y)), // Dělení celých čísel může vrátit zlomek, nebo i celé číslo!
+                Value::Rational(y) => Ok(Value::Rational(Rational::from_int(x) / y)),
                 Value::Real(y) => Ok(Value::Real(x as Real / y)),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze dělit celé číslo {x} a text {y}."
@@ -138,11 +174,25 @@ impl std::ops::Div<Value> for Value {
                     "Nelze dělit celé číslo {x} a boolean {y}."
                 ))),
             },
+            Value::BigInt(x) => match rhs {
+                Value::Nothing => Ok(Value::Nothing),
+                Value::Integer(y) => Ok(div_big_ints(&x, &BigInt::from(y))), // Dělení celých čísel může vrátit zlomek, nebo i celé číslo!
+                Value::BigInt(y) => Ok(div_big_ints(&x, &y)), // Dělení celých čísel může vrátit zlomek, nebo i celé číslo!
+                Value::Rational(y) => Ok(Value::Rational(Rational::from_bigint(x) / y)),
+                Value::Real(y) => Ok(Value::Real(bi_to_real(&x)?  / y)),
+                Value::Text(y) => Err(MathEvaluateError::new(format!(
+                    "Nelze dělit velké celé číslo {x} a text {y}."
+                ))),
+                Value::Bool(y) => Err(MathEvaluateError::new(format!(
+                    "Nelze dělit velké celé číslo {x} a boolean {y}."
+                ))),
+            },
             Value::Rational(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
-                Value::Integer(y) => Ok(Value::Rational(x / y as Rational)),
+                Value::Integer(y) => Ok(Value::Rational(x / Rational::from_int(y))),
+                Value::BigInt(y) => Ok(Value::Rational(x / Rational::from_bigint(y))),
                 Value::Rational(y) => Ok(Value::Rational(x / y)),
-                Value::Real(y) => Ok(Value::Real(x as Real / y)),
+                Value::Real(y) => Ok(Value::Real(to_real(&x)? / y)),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze dělit racionální číslo {x} a text {y}."
                 ))),
@@ -153,7 +203,8 @@ impl std::ops::Div<Value> for Value {
             Value::Real(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
                 Value::Integer(y) => Ok(Value::Real(x / y as Real)),
-                Value::Rational(y) => Ok(Value::Real(x / y as Real)),
+                Value::BigInt(y) => Ok(Value::Real(x / bi_to_real(&y)?)),
+                Value::Rational(y) => Ok(Value::Real(x / to_real(&y)?)),
                 Value::Real(y) => Ok(Value::Real(x / y)),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze dělit reálné číslo {x} a text {y}."
@@ -170,6 +221,9 @@ impl std::ops::Div<Value> for Value {
                 Value::Integer(y) => Err(MathEvaluateError::new(format!(
                     "Nelze dělit bool {x} a celé číslo {y}."
                 ))),
+                Value::BigInt(y) => Err(MathEvaluateError::new(format!(
+                    "Nelze dělit bool {x} a velké celé číslo {y}."
+                ))),
                 Value::Rational(y) => Err(MathEvaluateError::new(format!(
                     "Nelze dělit bool {x} a racionální číslo {y}."
                 ))),
@@ -185,6 +239,39 @@ impl std::ops::Div<Value> for Value {
     }
 }
 
+/// Dělení dvou celých čísel může vrátit zlomek (racio. číslo), nebo celé číslo
+fn div_ints(a: Integer, b: Integer) -> Value {
+    let ri = a / b;
+    let ri_asr = ri as f64;
+    let rr = a as f64 / b as f64;
+
+    if (ri_asr - rr).abs() < 0.0000001 {
+        return Value::Integer(ri);
+    } else {
+        return Value::Rational(Rational::new(a, b).reduce_move())
+    }
+}
+
+/// Dělení dvou celých čísel může vrátit zlomek (racio. číslo), nebo celé číslo
+fn div_big_ints(a: &BigInteger, b: &BigInteger) -> Value {
+    let ri = a / b;
+    let ri_asr = bi_to_real(&ri).ok();
+    let a_asr = bi_to_real(&a).ok();
+    let b_asr = bi_to_real(&b).ok();
+
+    return if ri_asr.is_some() && a_asr.is_some() && b_asr.is_some() {
+        let rr = a_asr.unwrap() / b_asr.unwrap();
+
+        if (ri_asr.unwrap() - rr).abs() < 0.0000001 {
+            Value::BigInt(ri)
+        } else {
+            Value::Rational(Rational::new_bigint(a.clone(), b.clone()))
+        }
+    } else {
+        Value::Rational(Rational::new_bigint(a.clone(), b.clone()))
+    }
+}
+
 impl std::ops::Mul<Value> for Value {
     type Output = Result<Value, MathEvaluateError>;
 
@@ -194,7 +281,8 @@ impl std::ops::Mul<Value> for Value {
             Value::Integer(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
                 Value::Integer(y) => Ok(Value::Integer(x * y)),
-                Value::Rational(y) => Ok(Value::Rational(x as Rational * y)),
+                Value::BigInt(y) => Ok(Value::BigInt(x * y)),
+                Value::Rational(y) => Ok(Value::Rational(Rational::from_int(x) * y)),
                 Value::Real(y) => Ok(Value::Real(x as Real * y)),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze násobit celé číslo {x} a text {y}."
@@ -203,11 +291,25 @@ impl std::ops::Mul<Value> for Value {
                     "Nelze násobit celé číslo {x} a boolean {y}."
                 ))),
             },
+            Value::BigInt(x) => match rhs {
+                Value::Nothing => Ok(Value::Nothing),
+                Value::Integer(y) => Ok(Value::BigInt(x * y)),
+                Value::BigInt(y) => Ok(Value::BigInt(x * y)),
+                Value::Rational(y) => Ok(Value::Rational(Rational::from_bigint(x) * y)),
+                Value::Real(y) => Ok(Value::Real(bi_to_real(&x)?  * y)),
+                Value::Text(y) => Err(MathEvaluateError::new(format!(
+                    "Nelze násobit velké celé číslo {x} a text {y}."
+                ))),
+                Value::Bool(y) => Err(MathEvaluateError::new(format!(
+                    "Nelze násobit velké celé číslo {x} a boolean {y}."
+                ))),
+            },
             Value::Rational(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
-                Value::Integer(y) => Ok(Value::Rational(x * y as Rational)),
+                Value::Integer(y) => Ok(Value::Rational(x * Rational::from_int(y))),
+                Value::BigInt(y) => Ok(Value::Rational(x * Rational::from_bigint(y))),
                 Value::Rational(y) => Ok(Value::Rational(x * y)),
-                Value::Real(y) => Ok(Value::Real(x as Real * y)),
+                Value::Real(y) => Ok(Value::Real(to_real(&x)?  * y)),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze násobit racionální číslo {x} a text {y}."
                 ))),
@@ -218,7 +320,8 @@ impl std::ops::Mul<Value> for Value {
             Value::Real(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
                 Value::Integer(y) => Ok(Value::Real(x * y as Real)),
-                Value::Rational(y) => Ok(Value::Real(x * y as Real)),
+                Value::BigInt(y) => Ok(Value::Real(x * bi_to_real(&y)?)),
+                Value::Rational(y) => Ok(Value::Real(x * to_real(&y)?)),
                 Value::Real(y) => Ok(Value::Real(x * y)),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze násobit reálné číslo {x} a text {y}."
@@ -234,6 +337,9 @@ impl std::ops::Mul<Value> for Value {
                 Value::Nothing => Ok(Value::Nothing),
                 Value::Integer(y) => Err(MathEvaluateError::new(format!(
                     "Nelze násobit bool {x} a celé číslo {y}."
+                ))),
+                Value::BigInt(y) => Err(MathEvaluateError::new(format!(
+                    "Nelze násobit bool {x} a velké celé číslo {y}."
                 ))),
                 Value::Rational(y) => Err(MathEvaluateError::new(format!(
                     "Nelze násobit bool {x} a racionální číslo {y}."
@@ -259,18 +365,31 @@ impl Add<Value> for Value {
             Value::Integer(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
                 Value::Integer(y) => Ok(Value::Integer(x + y)),
-                Value::Rational(y) => Ok(Value::Rational(x as Rational + y)),
+                Value::BigInt(y) => Ok(Value::BigInt(x + y)),
+                Value::Rational(y) => Ok(Value::Rational(Rational::from_int(x) + y)),
                 Value::Real(y) => Ok(Value::Real(x as Real + y)),
                 Value::Text(y) => Ok(Value::Text(x.to_string() + &y)),
                 Value::Bool(y) => Err(MathEvaluateError::new(format!(
                     "Nelze sčítat celé číslo {x} a boolean {y}."
                 ))),
             },
+            Value::BigInt(x) => match rhs {
+                Value::Nothing => Ok(Value::Nothing),
+                Value::Integer(y) => Ok(Value::BigInt(x + y)),
+                Value::BigInt(y) => Ok(Value::BigInt(x + y)),
+                Value::Rational(y) => Ok(Value::Rational(Rational::from_bigint(x) + y)),
+                Value::Real(y) => Ok(Value::Real(bi_to_real(&x)? + y)),
+                Value::Text(y) => Ok(Value::Text(x.to_string() + &y)),
+                Value::Bool(y) => Err(MathEvaluateError::new(format!(
+                    "Nelze sčítat velké celé číslo {x} a boolean {y}."
+                ))),
+            },
             Value::Rational(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
-                Value::Integer(y) => Ok(Value::Rational(x + y as Rational)),
+                Value::Integer(y) => Ok(Value::Rational(x + Rational::from_int(y))),
+                Value::BigInt(y) => Ok(Value::Rational(x + Rational::from_bigint(y))),
                 Value::Rational(y) => Ok(Value::Rational(x + y)),
-                Value::Real(y) => Ok(Value::Real(x as Real + y)),
+                Value::Real(y) => Ok(Value::Real(to_real(&x)? + y)),
                 Value::Text(y) => Ok(Value::Text(x.to_string() + &y)),
                 Value::Bool(y) => Err(MathEvaluateError::new(format!(
                     "Nelze sčítat racionální číslo {x} a boolean {y}."
@@ -279,7 +398,8 @@ impl Add<Value> for Value {
             Value::Real(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
                 Value::Integer(y) => Ok(Value::Real(x + y as Real)),
-                Value::Rational(y) => Ok(Value::Real(x + y as Real)),
+                Value::BigInt(y) => Ok(Value::Real(x + bi_to_real(&y)?)),
+                Value::Rational(y) => Ok(Value::Real(x + to_real(&y)?)),
                 Value::Real(y) => Ok(Value::Real(x + y)),
                 Value::Text(y) => Ok(Value::Text(x.to_string() + &y)),
                 Value::Bool(y) => Err(MathEvaluateError::new(format!(
@@ -289,6 +409,7 @@ impl Add<Value> for Value {
             Value::Text(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
                 Value::Integer(y) => Ok(Value::Text(x + &y.to_string())),
+                Value::BigInt(y) => Ok(Value::Text(x + &y.to_string())),
                 Value::Rational(y) => Ok(Value::Text(x + &y.to_string())),
                 Value::Real(y) => Ok(Value::Text(x + &y.to_string())),
                 Value::Text(y) => Ok(Value::Text(x + &y)),
@@ -298,6 +419,9 @@ impl Add<Value> for Value {
                 Value::Nothing => Ok(Value::Nothing),
                 Value::Integer(y) => Err(MathEvaluateError::new(format!(
                     "Nelze sčítat bool {x} a celé číslo {y}."
+                ))),
+                Value::BigInt(y) => Err(MathEvaluateError::new(format!(
+                    "Nelze sčítat bool {x} a velké celé číslo {y}."
                 ))),
                 Value::Rational(y) => Err(MathEvaluateError::new(format!(
                     "Nelze sčítat bool {x} a racionální číslo {y}."
@@ -329,8 +453,9 @@ impl Value {
                         let res = (Value::Integer(1) / Value::Integer(x.pow((-*y) as u32)))?;
                         Ok(res)
                     }
-                }
-                Value::Rational(y) => Ok(Value::Real((x as Real).powf(*y))),
+                },
+                Value::BigInt(_) => Err(MathEvaluateError::new(s!("Mocnění velkých celých čísel není povoleno"))),
+                Value::Rational(y) => Ok(Value::Real((x as Real).powf( to_real(y)?))),
                 Value::Real(y) => Ok(Value::Real((x as Real).powf(*y))),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze mocnit celé číslo {x} na text {y}."
@@ -339,11 +464,13 @@ impl Value {
                     "Nelze mocnit celé číslo {x} na boolean {y}."
                 ))),
             },
+            Value::BigInt(_) => Err(MathEvaluateError::new(s!("Mocnění velkých celých čísel není povoleno"))),
             Value::Rational(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
-                Value::Integer(y) => Ok(Value::Rational(x.powf(*y as f64))), // TODO: Rational pote upravit: Q^Z € Q
-                Value::Rational(y) => Ok(Value::Real((x as Real).powf(*y))),
-                Value::Real(y) => Ok(Value::Real((x as Real).powf(*y))),
+                Value::Integer(y) => Ok(Value::Real(to_real(&x)?.powf(*y as f64))), // TODO: Rational pote upravit: Q^Z € Q
+                Value::BigInt(_) => Err(MathEvaluateError::new(s!("Mocnění velkých celých čísel není povoleno"))),
+                Value::Rational(y) => Ok(Value::Real(to_real(&x)?.powf( to_real(y)?))),
+                Value::Real(y) => Ok(Value::Real(to_real(&x)?.powf(*y))),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze mocnit celé číslo {x} na text {y}."
                 ))),
@@ -354,7 +481,8 @@ impl Value {
             Value::Real(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
                 Value::Integer(y) => Ok(Value::Real(x.powf(*y as Real))),
-                Value::Rational(y) => Ok(Value::Real(x.powf(*y))),
+                Value::BigInt(_) => Err(MathEvaluateError::new(s!("Mocnění velkých celých čísel není povoleno"))),
+                Value::Rational(y) => Ok(Value::Real(x.powf(to_real(y)?))),
                 Value::Real(y) => Ok(Value::Real(x.powf(*y))),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze mocnit celé číslo {x} na text {y}."
