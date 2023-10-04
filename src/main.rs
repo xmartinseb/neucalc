@@ -37,18 +37,12 @@ fn main() {
                 let calc_result = calculator.evaluate_expr(&input);
                 match calc_result {
                     Ok(result) => {
+                        // Zlomek se pro přehlednost vypíše i jako zlomek, i jako reálné číslo
                         if let Value::Rational(ratio) = result.clone() {
-                            if let Some(ratio_as_int) = ratio.to_bigint(){
-                                // Zlomek je vlastně celé číslo
-                                let as_int = Value::BigInt(ratio_as_int);
-                                sprintln!(as_int);
-                            } else {
-                                // Zlomek se pro přehlednost vypíše i jako zlomek, i jako reálné číslo
-                                sprintln!(result);
-                                if let Some(real) = ratio.to_real() {
-                                    let as_real = Value::Real(real);
-                                    sprintln!(as_real);
-                                }
+                            sprintln!(result);
+                            if let Some(real) = ratio.to_real() {
+                                let as_real = Value::Real(real);
+                                sprintln!(as_real);
                             }
                         } else {
                             sprintln!(result);

@@ -82,7 +82,7 @@ impl FromStr for Rational {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // Například: -52.708 = -52708 / 1000
-        let num_regex = Regex::new(r"(?<p1>\d+)((\.)(?<p2>\d+))?").unwrap();
+        let num_regex = Regex::new(r"^(?<p1>\d+)((\.)(?<p2>\d+))?$").unwrap();
         let captures = num_regex.captures(s)
             .ok_or(MathParseError::new(s!("Nepodařilo se extrahovat části čísla regulárním výrazem")))?;
 
@@ -157,8 +157,8 @@ impl Add for Rational{
         } else {
             let lcm = self.denominator.lcm(&rhs.denominator);
 
-            let self_coef = &lcm / &rhs.denominator;
-            let rhs_coef = &lcm / &self.denominator;
+            let self_coef = &lcm / &self.denominator;
+            let rhs_coef = &lcm / &rhs.denominator;
 
             Rational {
                 numerator: self.numerator * self_coef + rhs.numerator * rhs_coef,
