@@ -1,6 +1,7 @@
 use std::ops::Neg;
 use crate::calc_base::{MathEvaluateError, MathParseError};
 use crate::calc_base::value::Value;
+use crate::calc_strategies::common::*;
 use crate::calc_strategies::ICalculatorStrategy;
 use crate::s;
 
@@ -15,7 +16,6 @@ impl<'expr> ICalculatorStrategy<'expr> for RecursiveScanStrategy<'expr> {
     ///Tato strategie nepoužívá žádnou speciální strukturu, jen rekurzivně skenuje text
     /// Tato metoda jen částečně zvaliduje správnost výrazu
     fn parse(&mut self, math_expr: &'expr str) -> Result<(), MathParseError> {
-        check_brackets(math_expr)?;
         self.math_expr = math_expr;
         Ok(())
     }
@@ -92,6 +92,7 @@ fn halve_expr(expr: &str, oper_pos: usize) -> (&str, &str) {
 
 fn find_oper(expr: &str) -> Option<(char, usize)> {
     let exprlen = expr.len();
+    let mut is_in_string = false;
     let mut curr_depth = 0;
     let mut best_oper_depth = i32::MAX;
     let mut best_oper_priority = i32::MAX;
@@ -99,91 +100,28 @@ fn find_oper(expr: &str) -> Option<(char, usize)> {
     let mut best_operator_symbol = '\0';
 
     for (idx, c) in expr.chars().rev().enumerate() {
-        if c == ')' {
-            curr_depth += 1;
-        } else if c == '(' {
-            curr_depth -= 1;
-        } else {
-            let oper_priority = is_oper(c);
-            if oper_priority > 0
-                && (curr_depth < best_oper_depth
-                || (curr_depth == best_oper_depth && oper_priority < best_oper_priority))
-            {
-                best_oper_priority = oper_priority;
-                best_oper_depth = curr_depth;
-                best_oper_pos = exprlen - idx - 1;
-                best_operator_symbol = c;
+        if c == '"' {
+            is_in_string = !is_in_string;
+        } else if !is_in_string {
+            if c == ')' {
+                curr_depth += 1;
+            } else if c == '(' {
+                curr_depth -= 1;
+            } else {
+                let oper_priority = is_oper(c);
+                if oper_priority > 0
+                    && (curr_depth < best_oper_depth
+                    || (curr_depth == best_oper_depth && oper_priority < best_oper_priority))
+                {
+                    best_oper_priority = oper_priority;
+                    best_oper_depth = curr_depth;
+                    best_oper_pos = exprlen - idx - 1;
+                    best_operator_symbol = c;
+                }
             }
         }
     }
 
     return if best_oper_pos == usize::MAX
     { None } else { Some((best_operator_symbol, best_oper_pos)) };
-}
-
-/// Pokud je symbol operátor, vrací jeho prioritu, jinak vrací 0
-fn is_oper(symbol: char) -> i32 {
-    match symbol {
-        '+' => 1,
-        '-' => 1,
-        '*' => 2,
-        '/' => 2,
-        '^' => 3,
-        _ => 0
-    }
-}
-
-fn trim_brackets(expr: &str) -> &str {
-    let mut subexpr = expr;
-    while subexpr.len() > 2 && subexpr.starts_with('(') && subexpr.ends_with(')') {
-        let subexpr_wout_brackets = &subexpr[1..subexpr.len() - 1];
-        if check_brackets_simple(subexpr_wout_brackets) {
-            subexpr = subexpr_wout_brackets;
-        } else {
-            break;
-        }
-    }
-    subexpr.trim()
-}
-
-fn check_brackets_simple(expr: &str) -> bool {
-    let mut le = 0;
-    let mut ri = 0;
-    for c in expr.chars() {
-        if c == '(' {
-            le += 1;
-        } else if c == ')' {
-            ri += 1;
-            if ri > le {
-                return false;
-            }
-        }
-    }
-
-    if le == ri {
-        true
-    } else {
-        false
-    }
-}
-
-fn check_brackets(expr: &str) -> Result<(), MathParseError> {
-    let mut le = 0;
-    let mut ri = 0;
-    for (i, c) in expr.chars().enumerate() {
-        if c == '(' {
-            le += 1;
-        } else if c == ')' {
-            ri += 1;
-            if ri > le {
-                return Err(MathParseError::new(format!("Na pozici {i} počet pravých závorek předběhl počet levých závorek")));
-            }
-        }
-    }
-
-    if le == ri {
-        Ok(())
-    } else {
-        Err(MathParseError::new(s!("Počet levých a pravých závorek musí být stejný")))
-    }
 }

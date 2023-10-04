@@ -16,6 +16,7 @@ fn main() {
     println!("| . ` |/ _ \\ | | |/ __/ _` | |/ __|");
     println!("| |\\  |  __/ |_| | (_| (_| | | (__");
     println!("\\_| \\_/\\___|\\__,_|\\___\\__,_|_|\\___|  Verze 0.1.1");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
 
     let calculator = Calculator::<RecursiveScanStrategy>::new();

@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 use crate::base::IAppError;
 use crate::calc_base::value::Value;
+use crate::calc_strategies::common::check_brackets_and_quots;
 use crate::calc_strategies::ICalculatorStrategy;
 
 /// Calculator pomocí metody evaluate_expr vypočítá zadaný matematický výraz. Potřebuje ale
@@ -12,6 +13,8 @@ pub struct Calculator<'a, TStrategy: ICalculatorStrategy<'a>> {
 
 impl<'a, TStrategy: ICalculatorStrategy<'a>> Calculator<'a, TStrategy> {
     pub fn evaluate_expr(&self, math_expr: &'a str) -> Result<Value, Box<dyn IAppError>> {
+        check_brackets_and_quots(math_expr)?;
+
         let mut calc_strategy : TStrategy = Default::default();
         return match calc_strategy.parse(math_expr) {
             Ok(_) => {
@@ -30,6 +33,8 @@ impl<'a, TStrategy: ICalculatorStrategy<'a>> Calculator<'a, TStrategy> {
             h: PhantomData::default(),
         };
     }
+
+
 }
 
 impl<'a, TStagegy: ICalculatorStrategy<'a>> Default for Calculator<'a, TStagegy> {

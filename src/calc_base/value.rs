@@ -54,10 +54,33 @@ fn is_named_const(name: &str) -> Option<Value> {
     };
 }
 
+fn value_is_string_literal(expr: &str) -> Option<&str> {
+    let expr = expr.trim();
+    let mut is_in_string = false;
+    let len = expr.len();
+    return if len >= 2 && expr.starts_with('"') && expr.ends_with('"') {
+        for (idx, c) in expr.chars().enumerate() {
+            if c == '"' {
+                is_in_string = !is_in_string;
+            }
+
+            if idx < len - 1 && !is_in_string {
+                return None;
+            }
+        }
+        Some(&expr[1..expr.len() - 1])
+    } else {
+        None
+    }
+}
+
 impl Value {
     pub fn parse(value: &str) -> Result<Self, MathEvaluateError> {
         let value = value.trim();
-        if let Some(val_const) = is_named_const(value){
+        if let Some(string_value) = value_is_string_literal(value) {
+            return Ok(Value::Text(s!(string_value)))
+        }
+        else if let Some(val_const) = is_named_const(value){
             return Ok(val_const);
         }
         else if let Ok(boolean) = value.parse::<bool>() {
@@ -234,7 +257,7 @@ fn to_real(q: &Rational) -> Result<Real, MathEvaluateError> {
 }
 
 fn bi_to_real(q: &BigInteger) -> Result<Real, MathEvaluateError> {
-    return match q.to_string().parse::<Real>().ok() {
+    return match q.to_f64() {
         None => {Err(MathEvaluateError::new(format!("Velké celé číslo '{q}' se nepodařilo převést na reálné číslo")))}
         Some(r) => {Ok(r)}
     }

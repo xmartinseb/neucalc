@@ -3,6 +3,7 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 use num_bigint::BigInt;
 use crate::calc_base::{BigInteger, Real};
 use num_integer::Integer;
+use num_traits::ToPrimitive;
 
 // Racionální číslo (zlomek) je chápáno jako dvojice celých čísel. Proto je počítání s ním dokonale přesné.
 #[derive(Debug, Clone)]
@@ -13,8 +14,8 @@ pub struct Rational{
 
 impl Rational {
     pub fn to_real(&self) -> Option<Real> {
-        Some(self.numerator.to_string().parse::<Real>().ok()?
-            / self.denominator.to_string().parse::<Real>().ok()?)
+        Some(self.numerator.to_f64()?
+            / self.denominator.to_f64()?)
     }
 
     pub fn from_int(i: super::Integer) -> Rational {
@@ -49,14 +50,6 @@ impl Rational {
         Rational {
             numerator: self.denominator.clone(),
             denominator: self.numerator.clone()
-        }
-    }
-
-    pub fn reduce_inplace(&mut self){
-        let gcd = self.numerator.gcd(&self.denominator);
-        if gcd > BigInt::from(1) {
-            self.numerator = &self.numerator / &gcd;
-            self.denominator = &self.denominator / &gcd;
         }
     }
 
