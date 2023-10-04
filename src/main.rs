@@ -10,6 +10,14 @@ mod calc_base;
 mod calculator;
 
 fn main() {
+    println!(" _   _                      _");
+    println!("| \\ | |                    | |");
+    println!("|  \\| | ___ _   _  ___ __ _| | ___");
+    println!("| . ` |/ _ \\ | | |/ __/ _` | |/ __|");
+    println!("| |\\  |  __/ |_| | (_| (_| | | (__");
+    println!("\\_| \\_/\\___|\\__,_|\\___\\__,_|_|\\___|  Verze beta");
+    println!();
+
     let calculator = Calculator::<RecursiveScanStrategy>::new();
     let stdin = io::stdin();
 
@@ -44,19 +52,11 @@ fn main() {
                         } else {
                             sprintln!(result);
                         }
-
-                        // sprintln!(result);
-                        // // Zlomek se pro přehlednost vypíše i jako zlomek, i jako reálné číslo
-                        // if let Value::Rational(ratio) = result {
-                        //     if let Some(real) = ratio.to_real() {
-                        //         let as_real = Value::Real(real);
-                        //         sprintln!(as_real);
-                        //     }
-                        // }
                     },
                     Err(err) => println!("Chyba: {}", err.get_msg()),
                 }
             }
+            println!();
             return true;
         });
 

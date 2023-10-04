@@ -2,6 +2,7 @@ use std::fmt::Display;
 use std::ops::{Add, Sub};
 use crate::calc_base::*;
 use crate::calc_base::rational::Rational;
+use num_traits::cast::ToPrimitive;
 use crate::s;
 
 /// Hodnota, se kterou se pracuje při výpočtu matematického výrazu, může mít různé typy.
@@ -28,6 +29,16 @@ pub mod consts {
     pub static SQRT3: Value = Value::Real(1.73205080756887729352744634150587236694280525381038);
     pub static I64MAX: Value = Value::Integer(i64::MAX);
     pub static I64MIN: Value = Value::Integer(i64::MIN);
+}
+
+mod system_consts {
+    use lazy_static::lazy_static;
+    use crate::calc_base::BigInteger;
+
+    lazy_static! {
+        pub static ref BI_64MAX: BigInteger = BigInteger::from(i64::MAX);
+        pub static ref BI_64MIN: BigInteger = BigInteger::from(i64::MIN);
+    }
 }
 
 /// Pokud je name platný název konstanty, vrátí se její hodnota, jinak se vrátí None
@@ -59,6 +70,34 @@ impl Value {
             return Ok(Value::Real(real));
         }
         Err(MathEvaluateError::new(format!("Výraz '{value}' není platná hodnota.")))
+    }
+
+    // V některých případech lze považovat BigInteger za Integer. Někdy je zase zlomek
+    // celým číslem. Tato metoda najde co nejjednodušší typ.
+    pub fn simplify_type_move(self) -> Self {
+        return match self {
+            Value::Nothing => self,
+            Value::Integer(_) => self,
+            Value::Text(_) => self,
+            Value::Bool(_) => self,
+            Value::Real(r) => return if r == 0.0 {Value::Integer(0)} else {self},
+            Value::BigInt(b) => {
+                if let Some(i) = b.to_i64() {
+                    Value::Integer(i)
+                } else {
+                    Value::BigInt(b)
+                }
+            }
+            Value::Rational(r) => {
+                return if let Some(as_bigint) = r.to_bigint() {
+                    if let Some(as_int) = as_bigint.to_i64() {
+                        Value::Integer(as_int)
+                    } else {
+                        Value::BigInt(as_bigint)
+                    }
+                } else { Value::Rational(r) }
+            }
+        };
     }
 }
 
@@ -108,11 +147,15 @@ impl std::ops::Neg for Value {
     }
 }
 
+fn simplify_result_type(x: Result<Value, MathEvaluateError>) -> Result<Value, MathEvaluateError> {
+    Ok(x?.simplify_type_move())
+}
+
 impl Sub<Value> for Value {
     type Output = Result<Value, MathEvaluateError>;
 
     fn sub(self, rhs: Value) -> Self::Output {
-        match self {
+        let result = match self {
             Value::Nothing => Ok(Value::Nothing),
             Value::Integer(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
@@ -178,7 +221,8 @@ impl Sub<Value> for Value {
             Value::Bool(x) => Err(MathEvaluateError::new(format!(
                 "Na boolean {x} nelze aplikovat operátor minus"
             ))),
-        }
+        };
+        return simplify_result_type(result);
     }
 }
 
@@ -200,7 +244,7 @@ impl std::ops::Div<Value> for Value {
     type Output = Result<Value, MathEvaluateError>;
 
     fn div(self, rhs: Value) -> Self::Output {
-        match self {
+        let result = match self {
             Value::Nothing => Ok(Value::Nothing),
             Value::Integer(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
@@ -276,7 +320,8 @@ impl std::ops::Div<Value> for Value {
                 ))),
                 Value::Bool(y) => Ok(Value::Bool(x && y)),
             },
-        }
+        };
+        return simplify_result_type(result);
     }
 }
 
@@ -286,10 +331,10 @@ fn div_ints(a: Integer, b: Integer) -> Value {
     let ri_asr = ri as f64;
     let rr = a as f64 / b as f64;
 
-    if (ri_asr - rr).abs() < 0.0000001 {
-        return Value::Integer(ri);
+    return if (ri_asr - rr).abs() < 0.0000001 {
+        Value::Integer(ri)
     } else {
-        return Value::Rational(Rational::new(a, b).reduce_move())
+        Value::Rational(Rational::new(a, b).reduce_move())
     }
 }
 
@@ -317,7 +362,7 @@ impl std::ops::Mul<Value> for Value {
     type Output = Result<Value, MathEvaluateError>;
 
     fn mul(self, rhs: Value) -> Self::Output {
-        match self {
+        let result = match self {
             Value::Nothing => Ok(Value::Nothing),
             Value::Integer(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
@@ -399,7 +444,8 @@ impl std::ops::Mul<Value> for Value {
                 ))),
                 Value::Bool(y) => Ok(Value::Bool(x && y)),
             },
-        }
+        };
+        return simplify_result_type(result);
     }
 }
 
@@ -407,7 +453,7 @@ impl Add<Value> for Value {
     type Output = Result<Value, MathEvaluateError>;
 
     fn add(self, rhs: Value) -> Self::Output {
-        match self {
+        let result = match self {
             Value::Nothing => Ok(Value::Nothing),
             Value::Integer(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
@@ -487,7 +533,8 @@ impl Add<Value> for Value {
                 ))),
                 Value::Bool(y) => Ok(Value::Bool(x || y)),
             },
-        }
+        };
+        return simplify_result_type(result);
     }
 }
 
