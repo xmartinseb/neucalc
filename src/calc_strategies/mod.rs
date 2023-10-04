@@ -1,5 +1,5 @@
 pub mod recursive_scan_strategy;
-mod return_always_zero_strategy;
+mod always_zero_strategy;
 pub mod common;
 
 use crate::calc_base::{MathEvaluateError, MathParseError};

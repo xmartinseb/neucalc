@@ -6,13 +6,13 @@ use crate::calc_strategies::ICalculatorStrategy;
 
 /// Calculator pomocí metody evaluate_expr vypočítá zadaný matematický výraz. Potřebuje ale
 /// doplnit typ strategie. Strategie určuje použitý algoritmus parsování a výpočtů.
-pub struct Calculator<'a, TStrategy: ICalculatorStrategy<'a>> {
+pub struct Calculator<'expr, TStrategy: ICalculatorStrategy<'expr>> {
     g : PhantomData<TStrategy>, // Phantom data nic neobsahuje, jen vyznačuje kompilátoru, jak se používají generické parametry
-    h : PhantomData<&'a str>
+    h : PhantomData<&'expr str>
 }
 
-impl<'a, TStrategy: ICalculatorStrategy<'a>> Calculator<'a, TStrategy> {
-    pub fn evaluate_expr(&self, math_expr: &'a str) -> Result<Value, Box<dyn IAppError>> {
+impl<'expr, TStrategy: ICalculatorStrategy<'expr>> Calculator<'expr, TStrategy> {
+    pub fn evaluate_expr(&self, math_expr: &'expr str) -> Result<Value, Box<dyn IAppError>> {
         check_brackets_and_quots(math_expr)?;
 
         let mut calc_strategy : TStrategy = Default::default();
@@ -33,11 +33,9 @@ impl<'a, TStrategy: ICalculatorStrategy<'a>> Calculator<'a, TStrategy> {
             h: PhantomData::default(),
         };
     }
-
-
 }
 
-impl<'a, TStagegy: ICalculatorStrategy<'a>> Default for Calculator<'a, TStagegy> {
+impl<'expr, TStagegy: ICalculatorStrategy<'expr>> Default for Calculator<'expr, TStagegy> {
     fn default() -> Self {
         Calculator::new()
     }
