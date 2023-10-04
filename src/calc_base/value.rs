@@ -113,6 +113,7 @@ impl Value {
                 }
             }
             Value::Rational(r) => {
+                let r = r.reduce_move();
                 return if let Some(as_bigint) = r.to_bigint() {
                     if let Some(as_int) = as_bigint.to_i64() {
                         Value::Integer(as_int)
@@ -351,35 +352,12 @@ impl std::ops::Div<Value> for Value {
 
 /// Dělení dvou celých čísel může vrátit zlomek (racio. číslo), nebo celé číslo
 fn div_ints(a: Integer, b: Integer) -> Value {
-    let ri = a / b;
-    let ri_asr = ri as f64;
-    let rr = a as f64 / b as f64;
-
-    return if (ri_asr - rr).abs() < 0.0000001 {
-        Value::Integer(ri)
-    } else {
-        Value::Rational(Rational::new(a, b).reduce_move())
-    }
+    return Value::Rational(Rational::new(a, b)).simplify_type_move();
 }
 
 /// Dělení dvou celých čísel může vrátit zlomek (racio. číslo), nebo celé číslo
 fn div_big_ints(a: &BigInteger, b: &BigInteger) -> Value {
-    let ri = a / b;
-    let ri_asr = bi_to_real(&ri).ok();
-    let a_asr = bi_to_real(&a).ok();
-    let b_asr = bi_to_real(&b).ok();
-
-    return if ri_asr.is_some() && a_asr.is_some() && b_asr.is_some() {
-        let rr = a_asr.unwrap() / b_asr.unwrap();
-
-        if (ri_asr.unwrap() - rr).abs() < 0.0000001 {
-            Value::BigInt(ri)
-        } else {
-            Value::Rational(Rational::new_bigint(a.clone(), b.clone()))
-        }
-    } else {
-        Value::Rational(Rational::new_bigint(a.clone(), b.clone()))
-    }
+    return Value::Rational(Rational::new_bigint(a.clone(), b.clone())).simplify_type_move();
 }
 
 impl std::ops::Mul<Value> for Value {

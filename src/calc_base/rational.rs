@@ -3,7 +3,7 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 use num_bigint::BigInt;
 use crate::calc_base::{BigInteger, Real};
 use num_integer::Integer;
-use num_traits::ToPrimitive;
+use num_traits::{Signed, ToPrimitive};
 
 // Racionální číslo (zlomek) je chápáno jako dvojice celých čísel. Proto je počítání s ním dokonale přesné.
 #[derive(Debug, Clone)]
@@ -36,14 +36,14 @@ impl Rational {
         Rational {
             numerator: BigInteger::from(numerator),
             denominator: BigInteger::from(denominator)
-        }
+        }.reduce_move()
     }
 
     pub fn new_bigint(numerator: super::BigInteger, denominator: super::BigInteger) -> Rational {
         Rational {
             numerator,
             denominator
-        }
+        }.reduce_move()
     }
 
     pub fn inverse(&self) -> Rational {
@@ -55,7 +55,7 @@ impl Rational {
 
     pub fn reduce_move(mut self) -> Self{
         let gcd = self.numerator.gcd(&self.denominator);
-        if gcd > BigInt::from(1) {
+        if gcd.abs() > BigInt::from(1) {
             self.numerator = &self.numerator / &gcd;
             self.denominator = &self.denominator / &gcd;
         }
