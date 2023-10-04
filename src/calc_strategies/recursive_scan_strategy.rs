@@ -90,6 +90,9 @@ fn halve_expr(expr: &str, oper_pos: usize) -> (&str, &str) {
     }
 }
 
+/// Vrací nalezený operátor a jeho pozici v textu.
+/// POZOR! Nejedná se o pozici ve smyslu index znaku, ale index bajtu!
+/// Znak operátoru má mít jeden bajt, ale jiné znaky UTF-8 mohou mít víc bajtů.
 fn find_oper(expr: &str) -> Option<(char, usize)> {
     let exprlen = expr.len();
     let mut is_in_string = false;
@@ -99,7 +102,8 @@ fn find_oper(expr: &str) -> Option<(char, usize)> {
     let mut best_oper_pos = usize::MAX;
     let mut best_operator_symbol = '\0';
 
-    for (idx, c) in expr.chars().rev().enumerate() {
+    let mut bytes_scanned: usize = 0;
+    for c in expr.chars().rev() {
         if c == '"' {
             is_in_string = !is_in_string;
         } else if !is_in_string {
@@ -115,11 +119,12 @@ fn find_oper(expr: &str) -> Option<(char, usize)> {
                 {
                     best_oper_priority = oper_priority;
                     best_oper_depth = curr_depth;
-                    best_oper_pos = exprlen - idx - 1;
+                    best_oper_pos = exprlen - bytes_scanned - 1;
                     best_operator_symbol = c;
                 }
             }
         }
+        bytes_scanned += c.len_utf8();
     }
 
     return if best_oper_pos == usize::MAX

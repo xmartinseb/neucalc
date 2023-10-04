@@ -57,7 +57,8 @@ fn is_named_const(name: &str) -> Option<Value> {
 fn value_is_string_literal(expr: &str) -> Option<&str> {
     let expr = expr.trim();
     let mut is_in_string = false;
-    let len = expr.len();
+
+    let len = expr.chars().count();
     return if len >= 2 && expr.starts_with('"') && expr.ends_with('"') {
         for (idx, c) in expr.chars().enumerate() {
             if c == '"' {
