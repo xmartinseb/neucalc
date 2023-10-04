@@ -59,7 +59,13 @@ impl std::ops::Neg for Value {
     fn neg(self) -> Self::Output {
         return match self {
             Value::Nothing => Ok(Value::Nothing),
-            Value::Integer(x) => Ok(Value::Integer(-x)),
+            Value::Integer(x) => {
+                return if let Some(result) = x.checked_neg() {
+                    Ok(Value::Integer(result))
+                } else {
+                    Ok(Value::BigInt(-BigInt::from(x)))
+                }
+            },
             Value::BigInt(x) => Ok(Value::BigInt(-x)),
             Value::Rational(x) => Ok(Value::Rational(-x)),
             Value::Real(x) => Ok(Value::Real(-x)),
@@ -81,7 +87,13 @@ impl Sub<Value> for Value {
             Value::Nothing => Ok(Value::Nothing),
             Value::Integer(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
-                Value::Integer(y) => Ok(Value::Integer(x - y)),
+                Value::Integer(y) => {
+                    return if let Some(result) = x.checked_sub(y) {
+                        Ok(Value::Integer(result))
+                    } else {
+                        Ok(Value::BigInt(BigInt::from(x) - y))
+                    }
+                },
                 Value::BigInt(y) => Ok(Value::BigInt(BigInt::from(x) - y)),
                 Value::Rational(y) => Ok(Value::Rational(Rational::from_int(x) - y)),
                 Value::Real(y) => Ok(Value::Real(x as Real - y)),
@@ -280,7 +292,13 @@ impl std::ops::Mul<Value> for Value {
             Value::Nothing => Ok(Value::Nothing),
             Value::Integer(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
-                Value::Integer(y) => Ok(Value::Integer(x * y)),
+                Value::Integer(y) => {
+                    return if let Some(result) = x.checked_mul(y) {
+                        Ok(Value::Integer(result))
+                    } else {
+                        Ok(Value::BigInt(BigInt::from(x) * y))
+                    }
+                },
                 Value::BigInt(y) => Ok(Value::BigInt(x * y)),
                 Value::Rational(y) => Ok(Value::Rational(Rational::from_int(x) * y)),
                 Value::Real(y) => Ok(Value::Real(x as Real * y)),
@@ -364,7 +382,13 @@ impl Add<Value> for Value {
             Value::Nothing => Ok(Value::Nothing),
             Value::Integer(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
-                Value::Integer(y) => Ok(Value::Integer(x + y)),
+                Value::Integer(y) => {
+                    return if let Some(result) = x.checked_add(y) {
+                        Ok(Value::Integer(result))
+                    } else {
+                        Ok(Value::BigInt(BigInt::from(x) + y))
+                    }
+                },
                 Value::BigInt(y) => Ok(Value::BigInt(x + y)),
                 Value::Rational(y) => Ok(Value::Rational(Rational::from_int(x) + y)),
                 Value::Real(y) => Ok(Value::Real(x as Real + y)),
@@ -446,11 +470,18 @@ impl Value {
                 Value::Nothing => Ok(Value::Nothing),
                 Value::Integer(y) => {
                     if *y >= 0 {
-                        Ok(Value::Integer(x.pow(*y as u32)))
+                        let res = match x.checked_pow(*y as u32) {
+                            None => Value::BigInt(BigInt::from(x).pow(*y as u32)),
+                            Some(r) => Value::Integer(r)
+                        };
+                        Ok(res)
                     } else if *y == 0 {
                         return Ok(Value::Integer(1));
                     } else {
-                        let res = (Value::Integer(1) / Value::Integer(x.pow((-*y) as u32)))?;
+                        let res = match x.checked_pow((-*y) as u32) {
+                            None => (Value::Integer(1) / Value::BigInt(BigInt::from(x).pow((-*y) as u32)))?,
+                            Some(r) => (Value::Integer(1) / Value::Integer(r))?
+                        };
                         Ok(res)
                     }
                 },
