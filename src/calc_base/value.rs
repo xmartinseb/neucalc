@@ -90,7 +90,9 @@ impl Value {
             return Ok(Value::Integer(integer));
         } else if let Ok(biginteger) = value.parse::<BigInteger>() {
             return Ok(Value::BigInt(biginteger));
-        } else if let Ok(real) = value.parse::<Real>() {
+        } else if let Ok(ratio) = value.parse::<Rational>() {
+            return Ok(Value::Rational(ratio));
+        } else if let Ok(real) = value.parse::<Real>() { //Reálná čísla by neměla být parsovatelná z konzole
             return Ok(Value::Real(real));
         }
         Err(MathEvaluateError::new(format!("Výraz '{value}' není platná hodnota.")))

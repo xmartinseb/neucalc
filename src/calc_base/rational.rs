@@ -1,9 +1,12 @@
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Add, Div, Mul, Neg, Sub};
+use std::str::FromStr;
 use num_bigint::BigInt;
-use crate::calc_base::{BigInteger, Real};
+use crate::calc_base::{BigInteger, MathParseError, Real};
 use num_integer::Integer;
 use num_traits::{Signed, ToPrimitive};
+use regex::*;
+use crate::s;
 
 // Racionální číslo (zlomek) je chápáno jako dvojice celých čísel. Proto je počítání s ním dokonale přesné.
 #[derive(Debug, Clone)]
@@ -69,6 +72,31 @@ impl Rational {
         } else {
             None
         }
+    }
+}
+
+/// Každé číslo napsané posloupností číslic je racionální, např. -52.464864686
+/// Není dobré pracovat s takovými čísly jako s f64, protože se ztratí přesnost.
+impl FromStr for Rational {
+    type Err = MathParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // Například: -52.708 = -52708 / 1000
+        let num_regex = Regex::new(r"(?<p1>\d+)((\.)(?<p2>\d+))?").unwrap();
+        let captures = num_regex.captures(s)
+            .ok_or(MathParseError::new(s!("Nepodařilo se extrahovat části čísla regulárním výrazem")))?;
+
+        let p1_str = captures.name("p1").ok_or(MathParseError::new(s!("Racionální číslo má mít tvar #.#")))?.as_str().trim().trim_start_matches('0');
+        let p2_str = captures.name("p2").ok_or(MathParseError::new(s!("Racionální číslo má mít tvar #.#")))?.as_str().trim().trim_end_matches('0');
+
+        let p1 = p1_str.parse::<BigInteger>().map_err(|_| MathParseError::new(s!("Nepodařilo se převést výraz na racionální číslo")))?;
+        let p2 = p2_str.parse::<BigInteger>().map_err(|_| MathParseError::new(s!("Nepodařilo se převést výraz na racionální číslo")))?;
+
+        let mul = BigInteger::from(10).pow(p2_str.chars().count() as u32);
+        let numerator = p1 * &mul + p2;
+        let denumerator = mul;
+
+        return Ok(Rational::new_bigint(numerator, denumerator));
     }
 }
 
