@@ -89,9 +89,9 @@ impl Value {
         }else if let Ok(integer) = value.parse::<Integer>() {
             return Ok(Value::Integer(integer));
         } else if let Ok(biginteger) = value.parse::<BigInteger>() {
-            return Ok(Value::BigInt(biginteger));
+            return Ok(Value::BigInt(biginteger).simplify_type_move());
         } else if let Ok(ratio) = value.parse::<Rational>() {
-            return Ok(Value::Rational(ratio));
+            return Ok(Value::Rational(ratio).simplify_type_move());
         } else if let Ok(real) = value.parse::<Real>() { //Reálná čísla by neměla být parsovatelná z konzole
             return Ok(Value::Real(real));
         }

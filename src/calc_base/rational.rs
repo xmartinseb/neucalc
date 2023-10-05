@@ -88,15 +88,19 @@ impl FromStr for Rational {
 
         let p1_str = captures.name("p1").ok_or(MathParseError::new(s!("Racionální číslo má mít tvar #.#")))?.as_str().trim().trim_start_matches('0');
         let p2_str = captures.name("p2").ok_or(MathParseError::new(s!("Racionální číslo má mít tvar #.#")))?.as_str().trim().trim_end_matches('0');
+        return if p2_str.is_empty() { // Byly to jen nuly
+            let numerator = p1_str.parse::<BigInteger>().map_err(|_| MathParseError::new(s!("Nepodařilo se převést výraz na racionální číslo")))?;
+            Ok(Rational::from_bigint(numerator))
+        } else {
+            let p1 = p1_str.parse::<BigInteger>().map_err(|_| MathParseError::new(s!("Nepodařilo se převést výraz na racionální číslo")))?;
+            let p2 = p2_str.parse::<BigInteger>().map_err(|_| MathParseError::new(s!("Nepodařilo se převést výraz na racionální číslo")))?;
 
-        let p1 = p1_str.parse::<BigInteger>().map_err(|_| MathParseError::new(s!("Nepodařilo se převést výraz na racionální číslo")))?;
-        let p2 = p2_str.parse::<BigInteger>().map_err(|_| MathParseError::new(s!("Nepodařilo se převést výraz na racionální číslo")))?;
+            let mul = BigInteger::from(10).pow(p2_str.chars().count() as u32);
+            let numerator = p1 * &mul + p2;
+            let denumerator = mul;
 
-        let mul = BigInteger::from(10).pow(p2_str.chars().count() as u32);
-        let numerator = p1 * &mul + p2;
-        let denumerator = mul;
-
-        return Ok(Rational::new_bigint(numerator, denumerator));
+            Ok(Rational::new_bigint(numerator, denumerator))
+        }
     }
 }
 
