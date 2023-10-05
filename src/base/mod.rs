@@ -32,7 +32,10 @@ macro_rules! sprint {
 macro_rules! sprintln {
     ($expr:tt) => {
        println!("{}", $expr)
-    }
+    };
+    ($expr:expr) => {
+       println!("{}", $expr)
+    };
 }
 
 /// Základní rozhraní chyb definovaných v aplikaci

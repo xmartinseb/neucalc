@@ -6,6 +6,8 @@ use num_bigint::*;
 
 pub mod value;
 mod rational;
+pub mod func_call;
+pub mod std_funcs;
 
 /// Počítání celých čísel je na rozdíl od floatů přesné. Proto je lepší pracovat s tímto typem, kdykoliv to jde.
 pub type Integer = i64;

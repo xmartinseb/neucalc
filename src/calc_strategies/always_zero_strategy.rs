@@ -1,4 +1,6 @@
+use crate::base::IAppError;
 use crate::calc_base::{MathEvaluateError, MathParseError};
+use crate::calc_base::func_call::FuncCall;
 use crate::calc_base::value::Value;
 use crate::calc_strategies::ICalculatorStrategy;
 
@@ -16,5 +18,9 @@ impl<'expr> ICalculatorStrategy<'expr> for AlwaysZeroStrategy<'expr> {
 
     fn evaluate(&mut self) -> Result<Value, MathEvaluateError> {
         Ok(Value::Integer(0))
+    }
+
+    fn parse_func_call(&self, _: &str) -> Result<FuncCall, Box<dyn IAppError>> {
+        todo!()
     }
 }

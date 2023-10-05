@@ -10,15 +10,7 @@ mod calc_base;
 mod calculator;
 
 fn main() {
-    println!(" _   _                      _");
-    println!("| \\ | |                    | |");
-    println!("|  \\| | ___ _   _  ___ __ _| | ___");
-    println!("| . ` |/ _ \\ | | |/ __/ _` | |/ __|");
-    println!("| |\\  |  __/ |_| | (_| (_| | | (__");
-    println!("\\_| \\_/\\___|\\__,_|\\___\\__,_|_|\\___|  Verze 0.1.5, Martin Sebera 2023");
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!();
-
+    print_nice_header();
     let calculator = Calculator::<RecursiveScanStrategy>::new();
     let stdin = io::stdin();
 
@@ -63,8 +55,23 @@ fn main() {
             }
             Err(err) => {
                 println!("V programu došlo k chybě: {:?}", err);
+                println!("Stiskněte enter pro ukončení");
+                _ = stdin.read_line(&mut String::new());
                 return; // Konec z důvodu závažné chyby v programu
             }
         }
     }
+}
+
+/// Vytiskne logo programu Neucalc a přidá autorský podpis a číslo verze.
+fn print_nice_header() {
+    println!(" _   _                      _");
+    println!("| \\ | |                    | |");
+    println!("|  \\| | ___ _   _  ___ __ _| | ___");
+    println!("| . ` |/ _ \\ | | |/ __/ _` | |/ __|");
+    println!("| |\\  |  __/ |_| | (_| (_| | | (__");
+    let lastline = format!("\\_| \\_/\\___|\\__,_|\\___\\__,_|_|\\___|  Verze {}, Martin Sebera 2023", env!("CARGO_PKG_VERSION"));
+    sprintln!(lastline);
+    sprintln!("━".repeat(lastline.chars().count())); // Posledni radek bude podtrzeny
+    println!();
 }
