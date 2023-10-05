@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::str::FromStr;
 use num_bigint::BigInt;
-use crate::calc_base::{BigInteger, MathParseError, Real};
+use crate::calc_base::{MathParseError};
 use num_integer::Integer;
 use num_traits::{Signed, ToPrimitive};
 use regex::*;
@@ -11,38 +11,38 @@ use crate::s;
 // Racionální číslo (zlomek) je chápáno jako dvojice celých čísel. Proto je počítání s ním dokonale přesné.
 #[derive(Debug, Clone)]
 pub struct Rational{
-    numerator: BigInteger,
-    denominator: BigInteger
+    numerator: BigInt,
+    denominator: BigInt
 }
 
 impl Rational {
-    pub fn to_real(&self) -> Option<Real> {
+    pub fn to_real(&self) -> Option<f64> {
         Some(self.numerator.to_f64()?
             / self.denominator.to_f64()?)
     }
 
-    pub fn from_int(i: super::Integer) -> Rational {
+    pub fn from_int(i: i64) -> Rational {
         Rational {
-            numerator: BigInteger::from(i),
-            denominator: BigInteger::from(1)
+            numerator: BigInt::from(i),
+            denominator: BigInt::from(1)
         }
     }
 
-    pub fn from_bigint(i: super::BigInteger) -> Rational {
+    pub fn from_bigint(i: super::BigInt) -> Rational {
         Rational {
             numerator: i,
-            denominator: BigInteger::from(1)
+            denominator: BigInt::from(1)
         }
     }
 
-    pub fn new(numerator: super::Integer, denominator: super::Integer) -> Rational {
+    pub fn new(numerator: i64, denominator: i64) -> Rational {
         Rational {
-            numerator: BigInteger::from(numerator),
-            denominator: BigInteger::from(denominator)
+            numerator: BigInt::from(numerator),
+            denominator: BigInt::from(denominator)
         }.reduce_move()
     }
 
-    pub fn new_bigint(numerator: super::BigInteger, denominator: super::BigInteger) -> Rational {
+    pub fn new_bigint(numerator: super::BigInt, denominator: super::BigInt) -> Rational {
         Rational {
             numerator,
             denominator
@@ -66,8 +66,8 @@ impl Rational {
     }
 
     /// Když má zlomek jmenovatel 1, dá se považovat za celé číslo
-    pub fn to_bigint(&self) -> Option<BigInteger> {
-        return if self.denominator == BigInteger::from(1) {
+    pub fn to_bigint(&self) -> Option<BigInt> {
+        return if self.denominator == BigInt::from(1) {
             Some(self.numerator.clone())
         } else {
             None
@@ -89,13 +89,13 @@ impl FromStr for Rational {
         let p1_str = captures.name("p1").ok_or(MathParseError::new(s!("Racionální číslo má mít tvar #.#")))?.as_str().trim().trim_start_matches('0');
         let p2_str = captures.name("p2").ok_or(MathParseError::new(s!("Racionální číslo má mít tvar #.#")))?.as_str().trim().trim_end_matches('0');
         return if p2_str.is_empty() { // Byly to jen nuly
-            let numerator = p1_str.parse::<BigInteger>().map_err(|_| MathParseError::new(s!("Nepodařilo se převést výraz na racionální číslo")))?;
+            let numerator = p1_str.parse::<BigInt>().map_err(|_| MathParseError::new(s!("Nepodařilo se převést výraz na racionální číslo")))?;
             Ok(Rational::from_bigint(numerator))
         } else {
-            let p1 = p1_str.parse::<BigInteger>().map_err(|_| MathParseError::new(s!("Nepodařilo se převést výraz na racionální číslo")))?;
-            let p2 = p2_str.parse::<BigInteger>().map_err(|_| MathParseError::new(s!("Nepodařilo se převést výraz na racionální číslo")))?;
+            let p1 = p1_str.parse::<BigInt>().map_err(|_| MathParseError::new(s!("Nepodařilo se převést výraz na racionální číslo")))?;
+            let p2 = p2_str.parse::<BigInt>().map_err(|_| MathParseError::new(s!("Nepodařilo se převést výraz na racionální číslo")))?;
 
-            let mul = BigInteger::from(10).pow(p2_str.chars().count() as u32);
+            let mul = BigInt::from(10).pow(p2_str.chars().count() as u32);
             let numerator = p1 * &mul + p2;
             let denumerator = mul;
 
