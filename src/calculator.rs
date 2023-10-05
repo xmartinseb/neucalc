@@ -1,8 +1,10 @@
 use std::marker::PhantomData;
 use crate::base::IAppError;
+use crate::calc_base::expr::Expr;
 use crate::calc_base::value::Value;
 use crate::calc_strategies::common::check_brackets_and_quots;
 use crate::calc_strategies::ICalculatorStrategy;
+
 
 /// Calculator pomocí metody evaluate_expr vypočítá zadaný matematický výraz. Potřebuje ale
 /// doplnit typ strategie. Strategie určuje použitý algoritmus parsování a výpočtů.
@@ -15,8 +17,9 @@ impl<'expr, TStrategy: ICalculatorStrategy<'expr>> Calculator<'expr, TStrategy> 
     pub fn evaluate_expr(&self, math_expr: &'expr str) -> Result<Value, Box<dyn IAppError>> {
         check_brackets_and_quots(math_expr)?;
 
+        // Výraz prošel validační procedurou, nyní je považován za syntakticky správný
         let mut calc_strategy : TStrategy = Default::default();
-        return match calc_strategy.parse(math_expr) {
+        return match calc_strategy.parse(Expr::new(math_expr)) {
             Ok(_) => {
                 match calc_strategy.evaluate() {
                     Ok(value) => Ok(value),

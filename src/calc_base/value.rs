@@ -2,8 +2,6 @@ use std::fmt::Display;
 use crate::calc_base::*;
 use crate::calc_base::rational::Rational;
 use num_traits::cast::ToPrimitive;
-use crate::calc_base::func_call::FuncCall;
-use crate::calc_strategies::ICalculatorStrategy;
 use crate::s;
 
 /// Hodnota, se kterou se pracuje při výpočtu matematického výrazu, může mít různé typy.
@@ -17,7 +15,6 @@ pub enum Value {
     Real(f64),
     Text(String),
     Bool(bool),
-    Func(FuncCall),
 }
 
 /// Platné konstanty
@@ -77,7 +74,7 @@ fn value_is_string_literal(expr: &str) -> Option<&str> {
 }
 
 impl Value {
-    pub fn parse<'expr>(value: &str, strategy: &impl ICalculatorStrategy<'expr>) -> Result<Self, MathEvaluateError> {
+    pub fn parse<'expr>(value: &str) -> Result<Self, MathEvaluateError> {
         let value = value.trim();
         if let Some(string_value) = value_is_string_literal(value) {
             return Ok(Value::Text(s!(string_value)))
@@ -91,9 +88,9 @@ impl Value {
             return Ok(val_const);
         } else if let Ok(boolean) = value.parse::<bool>() {
             return Ok(Value::Bool(boolean));
-        } else if let Ok(func_call) = strategy.parse_func_call(value) {
+        } /*else if let Ok(func_call) = strategy.parse_func_call(value) {
             return Ok(Value::Func(func_call));
-        } else if let Ok(real) = value.parse::<f64>() { //Reálná čísla by neměla být parsovatelná z konzole
+        }*/ else if let Ok(real) = value.parse::<f64>() { //Reálná čísla by neměla být parsovatelná z konzole
             println!("Varování! Vstup z konzole se načetl jako reálné číslo. Zpravidla se načítá \
             racionální číslo. Výsledek nemusí být úplně přesný!");
             return Ok(Value::Real(real));
@@ -108,7 +105,6 @@ impl Value {
             Value::Nothing => self,
             Value::Integer(_) => self,
             Value::Text(_) => self,
-            Value::Func(f) => f.eval()?,
             Value::Bool(_) => self,
             Value::Real(r) => if r == 0.0 {Value::Integer(0)} else {self},
             Value::BigInt(b) => {
@@ -150,7 +146,6 @@ impl Display for Value {
             Value::Real(x) => write!(f, "{x}\t(real)"),
             Value::Text(x) => write!(f, "\"{x}\""),
             Value::Bool(x) => write!(f, "{x}"),
-            Value::Func(func) => write!(f, "{}({})", func.name(), func.params_as_string()),
         }
     }
 }

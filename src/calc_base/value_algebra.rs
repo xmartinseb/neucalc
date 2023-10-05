@@ -1,4 +1,3 @@
-use std::fmt::Display;
 use std::ops::{Add, Mul, Neg, Sub};
 use crate::calc_base::*;
 use crate::calc_base::rational::Rational;
@@ -22,7 +21,6 @@ impl Neg for Value {
             Value::BigInt(x) => Ok(Value::BigInt(-x)),
             Value::Rational(x) => Ok(Value::Rational(-x)),
             Value::Real(x) => Ok(Value::Real(-x)),
-            Value::Func(f) => Ok(f.eval()?.neg()?),
             Value::Text(x) => Err(MathEvaluateError::new(format!(
                 "Na text {x} nelze aplikovat unární mínus"
             ))),
@@ -55,7 +53,6 @@ impl Sub<Value> for Value {
                 Value::BigInt(y) => Ok(Value::BigInt(BigInt::from(x) - y)),
                 Value::Rational(y) => Ok(Value::Rational(Rational::from_int(x) - y)),
                 Value::Real(y) => Ok(Value::Real(x as f64 - y)),
-                Value::Func(f) => Ok((Value::Integer(x) + f.eval()?)?),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze odčítat celé číslo {x} a text {y}"
                 ))),
@@ -69,7 +66,6 @@ impl Sub<Value> for Value {
                 Value::BigInt(y) => Ok(Value::BigInt(x - y)),
                 Value::Rational(y) => Ok(Value::Rational(Rational::from_bigint(x) - y)),
                 Value::Real(y) => Ok(Value::Real(bi_to_real(&x)? - y)),
-                Value::Func(f) => Ok((Value::BigInt(x) + f.eval()?)?),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze odčítat velké celé číslo {x} a text {y}"
                 ))),
@@ -83,7 +79,6 @@ impl Sub<Value> for Value {
                 Value::BigInt(y) => Ok(Value::Rational(x - Rational::from_bigint(y))),
                 Value::Rational(y) => Ok(Value::Rational(x - y)),
                 Value::Real(y) => Ok(Value::Real(to_real(&x)?  - y)),
-                Value::Func(f) => Ok((Value::Rational(x) + f.eval()?)?),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze odčítat racionální číslo {x} a text {y}"
                 ))),
@@ -97,7 +92,6 @@ impl Sub<Value> for Value {
                 Value::BigInt(y) => Ok(Value::Real(x - bi_to_real(&y)? )),
                 Value::Rational(y) => Ok(Value::Real(x - to_real(&y)? )),
                 Value::Real(y) => Ok(Value::Real(x - y)),
-                Value::Func(f) => Ok((Value::Real(x) + f.eval()?)?),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze odčítat reálné číslo {x} a text {y}"
                 ))),
@@ -105,7 +99,6 @@ impl Sub<Value> for Value {
                     "Nelze odčítat reálné číslo {x} a boolean {y}"
                 ))),
             },
-            Value::Func(f) => f.eval()? - rhs,
             Value::Text(x) => Err(MathEvaluateError::new(format!(
                 "Na text {x} nelze aplikovat operátor minus"
             ))),
@@ -143,7 +136,6 @@ impl std::ops::Div<Value> for Value {
                 Value::BigInt(y) => Ok(div_big_ints(&BigInt::from(x), &y)), // Dělení celých čísel může vrátit zlomek, nebo i celé číslo!
                 Value::Rational(y) => Ok(Value::Rational(Rational::from_int(x) / y)),
                 Value::Real(y) => Ok(Value::Real(x as f64 / y)),
-                Value::Func(f) => Value::Integer(x) / f.eval()?,
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze dělit celé číslo {x} a text {y}."
                 ))),
@@ -157,7 +149,6 @@ impl std::ops::Div<Value> for Value {
                 Value::BigInt(y) => Ok(div_big_ints(&x, &y)), // Dělení celých čísel může vrátit zlomek, nebo i celé číslo!
                 Value::Rational(y) => Ok(Value::Rational(Rational::from_bigint(x) / y)),
                 Value::Real(y) => Ok(Value::Real(bi_to_real(&x)?  / y)),
-                Value::Func(f) => Value::BigInt(x) / f.eval()?,
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze dělit velké celé číslo {x} a text {y}."
                 ))),
@@ -171,7 +162,6 @@ impl std::ops::Div<Value> for Value {
                 Value::BigInt(y) => Ok(Value::Rational(x / Rational::from_bigint(y))),
                 Value::Rational(y) => Ok(Value::Rational(x / y)),
                 Value::Real(y) => Ok(Value::Real(to_real(&x)? / y)),
-                Value::Func(f) => Value::Rational(x) / f.eval()?,
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze dělit racionální číslo {x} a text {y}."
                 ))),
@@ -185,7 +175,6 @@ impl std::ops::Div<Value> for Value {
                 Value::BigInt(y) => Ok(Value::Real(x / bi_to_real(&y)?)),
                 Value::Rational(y) => Ok(Value::Real(x / to_real(&y)?)),
                 Value::Real(y) => Ok(Value::Real(x / y)),
-                Value::Func(f) => Value::Real(x) / f.eval()?,
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze dělit reálné číslo {x} a text {y}."
                 ))),
@@ -193,7 +182,6 @@ impl std::ops::Div<Value> for Value {
                     "Nelze dělit reálné číslo {x} a boolean {y}."
                 ))),
             },
-            Value::Func(f) => f.eval()? / rhs,
             Value::Text(x) => Err(MathEvaluateError::new(format!(
                 "Na text {x} neze aplikovat operátor dělení"
             ))),
@@ -233,7 +221,6 @@ impl Mul<Value> for Value {
                 Value::BigInt(y) => Ok(Value::BigInt(x * y)),
                 Value::Rational(y) => Ok(Value::Rational(Rational::from_int(x) * y)),
                 Value::Real(y) => Ok(Value::Real(x as f64 * y)),
-                Value::Func(f) => Value::Integer(x) * f.eval()?,
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze násobit celé číslo {x} a text {y}."
                 ))),
@@ -247,7 +234,6 @@ impl Mul<Value> for Value {
                 Value::BigInt(y) => Ok(Value::BigInt(x * y)),
                 Value::Rational(y) => Ok(Value::Rational(Rational::from_bigint(x) * y)),
                 Value::Real(y) => Ok(Value::Real(bi_to_real(&x)?  * y)),
-                Value::Func(f) => Value::BigInt(x) * f.eval()?,
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze násobit velké celé číslo {x} a text {y}."
                 ))),
@@ -261,7 +247,6 @@ impl Mul<Value> for Value {
                 Value::BigInt(y) => Ok(Value::Rational(x * Rational::from_bigint(y))),
                 Value::Rational(y) => Ok(Value::Rational(x * y)),
                 Value::Real(y) => Ok(Value::Real(to_real(&x)?  * y)),
-                Value::Func(f) => Value::Rational(x) * f.eval()?,
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze násobit racionální číslo {x} a text {y}."
                 ))),
@@ -275,7 +260,6 @@ impl Mul<Value> for Value {
                 Value::BigInt(y) => Ok(Value::Real(x * bi_to_real(&y)?)),
                 Value::Rational(y) => Ok(Value::Real(x * to_real(&y)?)),
                 Value::Real(y) => Ok(Value::Real(x * y)),
-                Value::Func(f) => Value::Real(x) * f.eval()?,
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze násobit reálné číslo {x} a text {y}."
                 ))),
@@ -283,7 +267,6 @@ impl Mul<Value> for Value {
                     "Nelze násobit reálné číslo {x} a boolean {y}."
                 ))),
             },
-            Value::Func(f) => f.eval()? * rhs,
             Value::Text(x) => Err(MathEvaluateError::new(format!(
                 "Na text {x} neze aplikovat operátor násobení"
             ))),
@@ -301,7 +284,6 @@ impl Mul<Value> for Value {
                 Value::Real(y) => Err(MathEvaluateError::new(format!(
                     "Nelze násobit bool {x} a reálné číslo {y}."
                 ))),
-                Value::Func(f) => Value::Bool(x) * f.eval()?,
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze násobit bool {x} a text {y}."
                 ))),
@@ -330,7 +312,6 @@ impl Add<Value> for Value {
                 Value::BigInt(y) => Ok(Value::BigInt(x + y)),
                 Value::Rational(y) => Ok(Value::Rational(Rational::from_int(x) + y)),
                 Value::Real(y) => Ok(Value::Real(x as f64 + y)),
-                Value::Func(f) => Value::Integer(x) + f.eval()?,
                 Value::Text(y) => Ok(Value::Text(x.to_string() + &y)),
                 Value::Bool(y) => Err(MathEvaluateError::new(format!(
                     "Nelze sčítat celé číslo {x} a boolean {y}."
@@ -342,7 +323,6 @@ impl Add<Value> for Value {
                 Value::BigInt(y) => Ok(Value::BigInt(x + y)),
                 Value::Rational(y) => Ok(Value::Rational(Rational::from_bigint(x) + y)),
                 Value::Real(y) => Ok(Value::Real(bi_to_real(&x)? + y)),
-                Value::Func(f) => Value::BigInt(x) + f.eval()?,
                 Value::Text(y) => Ok(Value::Text(x.to_string() + &y)),
                 Value::Bool(y) => Err(MathEvaluateError::new(format!(
                     "Nelze sčítat velké celé číslo {x} a boolean {y}."
@@ -354,7 +334,6 @@ impl Add<Value> for Value {
                 Value::BigInt(y) => Ok(Value::Rational(x + Rational::from_bigint(y))),
                 Value::Rational(y) => Ok(Value::Rational(x + y)),
                 Value::Real(y) => Ok(Value::Real(to_real(&x)? + y)),
-                Value::Func(f) => Value::Rational(x) + f.eval()?,
                 Value::Text(y) => Ok(Value::Text(x.to_string() + &y)),
                 Value::Bool(y) => Err(MathEvaluateError::new(format!(
                     "Nelze sčítat racionální číslo {x} a boolean {y}."
@@ -366,20 +345,17 @@ impl Add<Value> for Value {
                 Value::BigInt(y) => Ok(Value::Real(x + bi_to_real(&y)?)),
                 Value::Rational(y) => Ok(Value::Real(x + to_real(&y)?)),
                 Value::Real(y) => Ok(Value::Real(x + y)),
-                Value::Func(f) => Value::Real(x) + f.eval()?,
                 Value::Text(y) => Ok(Value::Text(x.to_string() + &y)),
                 Value::Bool(y) => Err(MathEvaluateError::new(format!(
                     "Nelze sčítat reálné číslo {x} a boolean {y}."
                 ))),
             },
-            Value::Func(f) => f.eval()? + rhs,
             Value::Text(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
                 Value::Integer(y) => Ok(Value::Text(x + &y.to_string())),
                 Value::BigInt(y) => Ok(Value::Text(x + &y.to_string())),
                 Value::Rational(y) => Ok(Value::Text(x + &y.to_string())),
                 Value::Real(y) => Ok(Value::Text(x + &y.to_string())),
-                Value::Func(f) => Value::Text(x) + f.eval()?,
                 Value::Text(y) => Ok(Value::Text(x + &y)),
                 Value::Bool(y) => Ok(Value::Text(x + &y.to_string())),
             },
@@ -397,7 +373,6 @@ impl Add<Value> for Value {
                 Value::Real(y) => Err(MathEvaluateError::new(format!(
                     "Nelze sčítat bool {x} a reálné číslo {y}."
                 ))),
-                Value::Func(f) => Value::Bool(x) + f.eval()?,
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze sčítat bool {x} a text {y}."
                 ))),
@@ -434,7 +409,6 @@ impl Value {
                 Value::BigInt(_) => Err(MathEvaluateError::new(s!("Mocnění velkých celých čísel není povoleno"))),
                 Value::Rational(y) => Ok(Value::Real((x as f64).powf( to_real(y)?))),
                 Value::Real(y) => Ok(Value::Real((x as f64).powf(*y))),
-                Value::Func(f) => Value::Integer(x).pow( &f.eval()?),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze mocnit celé číslo {x} na text {y}."
                 ))),
@@ -449,7 +423,6 @@ impl Value {
                 Value::BigInt(_) => Err(MathEvaluateError::new(s!("Mocnění velkých celých čísel není povoleno"))),
                 Value::Rational(y) => Ok(Value::Real(to_real(&x)?.powf( to_real(y)?))),
                 Value::Real(y) => Ok(Value::Real(to_real(&x)?.powf(*y))),
-                Value::Func(f) => Value::Rational(x).pow( &f.eval()?),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze mocnit celé číslo {x} na text {y}."
                 ))),
@@ -463,7 +436,6 @@ impl Value {
                 Value::BigInt(_) => Err(MathEvaluateError::new(s!("Mocnění velkých celých čísel není povoleno"))),
                 Value::Rational(y) => Ok(Value::Real(x.powf(to_real(y)?))),
                 Value::Real(y) => Ok(Value::Real(x.powf(*y))),
-                Value::Func(f) => Value::Real(x).pow( &f.eval()?),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
                     "Nelze mocnit celé číslo {x} na text {y}."
                 ))),
@@ -471,7 +443,6 @@ impl Value {
                     "Nelze mocnit celé číslo {x} na boolean {y}."
                 ))),
             },
-            Value::Func(f) => f.eval()?.pow(rhs),
             Value::Text(x) => Err(MathEvaluateError::new(format!(
                 "Nelze mocnit text {x}."
             ))),

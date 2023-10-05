@@ -1,4 +1,5 @@
 use crate::base::IAppError;
+use crate::calc_base::expr::Expr;
 use crate::calc_base::MathParseError;
 use crate::s;
 
@@ -14,8 +15,8 @@ pub fn is_oper(symbol: char) -> i32 {
     }
 }
 
-pub fn trim_brackets(expr: &str) -> &str {
-    let mut subexpr = expr;
+pub fn trim_brackets(expr: Expr) -> Expr {
+    let mut subexpr = expr.as_str();
     while subexpr.len() > 2 && subexpr.starts_with('(') && subexpr.ends_with(')') {
         let subexpr_wout_brackets = &subexpr[1..subexpr.len() - 1];
         if check_brackets_and_quots_simple(subexpr_wout_brackets) {
@@ -24,7 +25,7 @@ pub fn trim_brackets(expr: &str) -> &str {
             break;
         }
     }
-    subexpr.trim()
+    Expr::new(subexpr)
 }
 
 /// Ještě před zahájením výpočtu je potřeba zkontrolovat správnost výrazu. Tj. správnost postavení

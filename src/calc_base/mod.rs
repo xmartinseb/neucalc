@@ -9,6 +9,7 @@ mod rational;
 pub mod func_call;
 pub mod std_funcs;
 pub mod value_algebra;
+pub mod expr;
 
 // Chyba značící neplatně zadaný matematický výraz
 define_error_type!(MathParseError);

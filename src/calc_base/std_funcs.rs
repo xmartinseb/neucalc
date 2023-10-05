@@ -22,7 +22,6 @@ pub fn sin(rads: Value) -> Result<Value, MathEvaluateError> {
         Value::Real(r) => {Ok(Value::Real(r.sin()))}
         Value::Text(_) => {Err(MathEvaluateError::new(s!("sin(Text) není platné volání funkce")))}
         Value::Bool(_) => {Err(MathEvaluateError::new(s!("sin(Bool) není platné volání funkce")))}
-        Value::Func(f) => {sin(f.eval()?)}
     }
 }
 
@@ -43,7 +42,6 @@ pub fn sind(degs: Value) -> Result<Value, MathEvaluateError> {
         Value::Real(r) => {Ok(Value::Real(r.to_radians().sin()))}
         Value::Text(_) => {Err(MathEvaluateError::new(s!("sind(Text) není platné volání funkce")))}
         Value::Bool(_) => {Err(MathEvaluateError::new(s!("sind(Bool) není platné volání funkce")))}
-        Value::Func(f) => {sind(f.eval()?)}
     }
 }
 

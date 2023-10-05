@@ -1,9 +1,9 @@
 pub mod recursive_scan_strategy;
-mod always_zero_strategy;
 pub mod common;
 
 use crate::base::IAppError;
 use crate::calc_base::{MathEvaluateError, MathParseError};
+use crate::calc_base::expr::Expr;
 use crate::calc_base::func_call::FuncCall;
 use crate::calc_base::value::Value;
 
@@ -15,7 +15,7 @@ use crate::calc_base::value::Value;
 /// (2) Evaluate z logické struktury spočítá finální výsledek.
 pub trait ICalculatorStrategy<'expr> : Default
 {
-    fn parse(&mut self, math_expr: &'expr str) -> Result<(), MathParseError>;
+    fn parse(&mut self, math_expr: Expr<'expr>) -> Result<(), MathParseError>;
     fn evaluate(&mut self) -> Result<Value, MathEvaluateError>;
-    fn parse_func_call(&self, expr: &str) -> Result<FuncCall, Box<dyn IAppError>>;
+    fn parse_func_call(&self, expr: Expr<'expr>) -> Result<FuncCall, Box<dyn IAppError>>;
 }

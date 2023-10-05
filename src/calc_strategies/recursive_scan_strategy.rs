@@ -2,6 +2,7 @@ use std::ops::Neg;
 use regex::Regex;
 use crate::base::IAppError;
 use crate::calc_base::{MathEvaluateError, MathParseError};
+use crate::calc_base::expr::Expr;
 use crate::calc_base::func_call::FuncCall;
 use crate::calc_base::value::Value;
 use crate::calc_strategies::common::*;
@@ -12,31 +13,31 @@ use crate::s;
 /// transformace na stromovou strukturu aj. Výhodou je jednoduchost, ale pro velmi dlouhé výrazy je pomalá.
 #[derive(Default, Debug)]
 pub struct RecursiveScanStrategy<'expr> {
-    math_expr: &'expr str
+    math_expr: Expr<'expr>
 }
 
 impl<'expr> ICalculatorStrategy<'expr> for RecursiveScanStrategy<'expr> {
     ///Tato strategie nepoužívá žádnou speciální strukturu, jen rekurzivně skenuje text
     /// Tato metoda jen částečně zvaliduje správnost výrazu
-    fn parse(&mut self, math_expr: &'expr str) -> Result<(), MathParseError> {
+    fn parse(&mut self, math_expr: Expr<'expr>) -> Result<(), MathParseError> {
         self.math_expr = math_expr;
         Ok(())
     }
 
     fn evaluate(&mut self) -> Result<Value, MathEvaluateError> {
-        self.evaluate_rec_simplify(self.math_expr)
+        self.evaluate_rec_simplify(self.math_expr.dupl())
     }
 
-    fn parse_func_call(&self, expr: &str) -> Result<FuncCall, Box<dyn IAppError>>{
+    fn parse_func_call(&self, expr: Expr) -> Result<FuncCall, Box<dyn IAppError>>{
         let func_call_regex = Regex::new(r"^(?<fname>[a-zA-Z]+) *\((?<params>.*)\)$").unwrap();
-        let captures = ok_or_error(func_call_regex.captures(expr))?;
+        let captures = ok_or_error(func_call_regex.captures(expr.as_str()))?;
 
         let func_name = ok_or_error(captures.name("fname"))?.as_str();
         let params_as_str = ok_or_error(captures.name("params"))?.as_str().trim();
         let params_vec = if params_as_str.is_empty() {
             Vec::<_>::new()
         } else {
-            self.parse_params_str(params_as_str)?
+            self.parse_params_str(Expr::new(params_as_str))?
         };
 
         return Ok(FuncCall::new(func_name, params_vec));
@@ -50,7 +51,7 @@ impl<'expr> ICalculatorStrategy<'expr> for RecursiveScanStrategy<'expr> {
 
 impl<'expr> RecursiveScanStrategy<'expr> {
     /// Parametry, které jsou zadány oddělené čárkami, se převedou na vektor parametrů.
-    fn parse_params_str(&self, params_str: &str) -> Result<Vec<Value>, Box<dyn IAppError>> {
+    fn parse_params_str(&self, params_str: Expr) -> Result<Vec<Value>, Box<dyn IAppError>> {
         let mut delims = vec![]; // Pozice, podle nichz se string roztrha na jednotlive parametry
         let mut curr_depth = 0; // Carky, ktere oddeluji parametry musi samozrejme byt mimo zavorky
         let mut is_in_string = false; // Ty carky nesmi byt ani ve stringu
@@ -69,20 +70,20 @@ impl<'expr> RecursiveScanStrategy<'expr> {
         }
         let mut params = Vec::<Value>::new();
         if delims.len() == 0 { // Parametr je jen jeden, neni potreba nic trhat. Cely string je jeden parametr
-            params.push(parse_param(self, params_str)?);
+            params.push(parse_param(self, params_str.dupl())?);
         } else { // Pamateru je vic, string se musi rozthrat
             let mut last_substring_begin = 0usize;
             for substring_end in delims {
-                params.push(parse_param(self, &params_str[last_substring_begin..substring_end])?);
+                params.push(parse_param(self, Expr::new(&params_str.as_str()[last_substring_begin..substring_end]))?);
                 last_substring_begin = substring_end + 1;
             }
-            params.push(parse_param(self, &params_str[last_substring_begin..])?);
+            params.push(parse_param(self, Expr::new(&params_str.as_str()[last_substring_begin..]))?);
         }
 
         return Ok(params);
 
         // Pomocná funkce, která parsuje jeden parametr. Vrátí ho jako value, nebo vrátí chybu.
-        fn parse_param(this: &RecursiveScanStrategy, paramstr: &str) -> Result<Value, Box<dyn IAppError>> {
+        fn parse_param(this: &RecursiveScanStrategy, paramstr: Expr) -> Result<Value, Box<dyn IAppError>> {
             return match this.evaluate_rec_simplify(paramstr) {
                 Ok(param) => { Ok(param) }
                 Err(e) => {
@@ -93,16 +94,23 @@ impl<'expr> RecursiveScanStrategy<'expr> {
         }
     }
 
+    /// Používá se k rekurzivnímu vyhodnocení výrazu. Výraz vyhodnotí a zjednoduší
+    /// (např. zlomek na celé číslo, pokud to jde. BigInt na integer apod.)
     #[inline]
-    fn evaluate_rec_simplify(&self, expr: &str) -> Result<Value, MathEvaluateError> {
+    fn evaluate_rec_simplify(&self, expr: Expr) -> Result<Value, MathEvaluateError> {
         self.evaluate_rec(expr)?.simplify_type_move()
     }
 
-    fn evaluate_rec(&self, expr: &str) -> Result<Value, MathEvaluateError> {
-        let expr = trim_brackets(expr.trim());
-        match Self::find_oper(expr) {
-            None => {
-                return Value::parse(expr, self)?.simplify_type_move();
+    /// Používá se k rekurzivnímu vyhodnocení výrazu.
+    fn evaluate_rec(&self, expr: Expr) -> Result<Value, MathEvaluateError> {
+        let expr = trim_brackets(expr);
+        match Self::find_oper(expr.dupl()) {
+            None => { // Není-li ve výrazu dělící operátor, pak to bude buď volání funkce, nebo atomická hodnota
+                return if let Ok(func_call) = self.parse_func_call(expr.dupl()) {
+                    func_call.eval()
+                } else {
+                    Value::parse(expr.as_str())?.simplify_type_move()
+                }
             }
             Some((oper_symbol, oper_pos)) => {
                 let (left, right) = Self::halve_expr(expr, oper_pos);
@@ -156,19 +164,19 @@ impl<'expr> RecursiveScanStrategy<'expr> {
         }
     }
 
-    fn halve_expr(expr: &str, oper_pos: usize) -> (&str, &str) {
+    fn halve_expr(expr: Expr, oper_pos: usize) -> (Expr, Expr) {
         if oper_pos == 0 {
-            ("", &expr[1..].trim())
+            (Expr::new(""), Expr::new(&expr.as_str()[1..].trim()))
         } else {
-            (&expr[..oper_pos].trim(), &expr[oper_pos + 1..].trim())
+            (Expr::new(&expr.as_str()[..oper_pos].trim()), Expr::new(&expr.as_str()[oper_pos + 1..]))
         }
     }
 
     /// Vrací nalezený operátor a jeho pozici v textu.
     /// POZOR! Nejedná se o pozici ve smyslu index znaku, ale index bajtu!
     /// Znak operátoru má mít jeden bajt, ale jiné znaky UTF-8 mohou mít víc bajtů.
-    fn find_oper(expr: &str) -> Option<(char, usize)> {
-        let exprlen = expr.len();
+    fn find_oper(expr: Expr) -> Option<(char, usize)> {
+        let expr_bytes_len = expr.as_str().len();
         let mut is_in_string = false;
         let mut curr_depth = 0;
         let mut best_oper_priority = i32::MAX;
@@ -176,7 +184,7 @@ impl<'expr> RecursiveScanStrategy<'expr> {
         let mut best_operator_symbol = '\0';
 
         let mut bytes_scanned: usize = 0;
-        for c in expr.chars().rev() {
+        for c in expr.as_str().chars().rev() {
             if c == '"' {
                 is_in_string = !is_in_string;
             } else if !is_in_string {
@@ -191,7 +199,7 @@ impl<'expr> RecursiveScanStrategy<'expr> {
                         && oper_priority < best_oper_priority
                     {
                         best_oper_priority = oper_priority;
-                        best_oper_pos = exprlen - bytes_scanned - 1;
+                        best_oper_pos = expr_bytes_len - bytes_scanned - 1;
                         best_operator_symbol = c;
                     }
                 }
