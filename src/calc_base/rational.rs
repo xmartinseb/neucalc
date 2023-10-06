@@ -11,8 +11,8 @@ use crate::s;
 // Racionální číslo (zlomek) je chápáno jako dvojice celých čísel. Proto je počítání s ním dokonale přesné.
 #[derive(Debug, Clone)]
 pub struct Rational{
-    numerator: BigInt,
-    denominator: BigInt
+    pub numerator: BigInt,
+    pub denominator: BigInt
 }
 
 impl Rational {

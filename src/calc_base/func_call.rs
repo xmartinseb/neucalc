@@ -28,6 +28,13 @@ impl FuncCall {
                     std_funcs::max(&self.params)
                 }
             },
+            "sqrt" => {
+                if self.params.len() == 1 {
+                    std_funcs::sqrt(self.params[0].clone().simplify_type_move()?)
+                } else {
+                    Err(MathEvaluateError::new(format!("Funkce '{}' vyžaduje 1 parametr", self.name)))
+                }
+            },
             "sin" => {
                 if self.params.len() == 1 {
                     std_funcs::sin(self.params[0].clone().simplify_type_move()?)

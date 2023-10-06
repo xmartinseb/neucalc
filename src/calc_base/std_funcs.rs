@@ -1,4 +1,7 @@
+use num_bigint::BigInt;
+use num_integer::Roots;
 use num_traits::ToPrimitive;
+use num_traits::FromPrimitive;
 use crate::calc_base::MathEvaluateError;
 use crate::calc_base::rational::Rational;
 use crate::calc_base::value::Value;
@@ -77,5 +80,44 @@ fn cos_values_match_deg(deg_0_360: i64) -> Value {
 }
 
 pub fn max(params: &Vec<Value>) -> Result<Value, MathEvaluateError> {
+    // TODO: Bude implementováno, až se budou dát hodnoty porovnávat!
     Ok(Value::Integer(params.len() as i64))
+}
+
+pub fn sqrt(val: Value) -> Result<Value, MathEvaluateError> {
+    return  match val {
+        Value::Nothing => Err(MathEvaluateError::new(s!("sqrt(Nothing) není platné volání funkce"))),
+        Value::Integer(input_i) => {
+            let i_real = input_i as f64;
+            let result_real = i_real.sqrt();
+            let result_int = result_real as i64;
+            return if result_int.pow(2u32) == input_i {
+                Ok(Value::Integer(result_int))
+            } else {
+                Ok(Value::Real(result_real))
+            }
+        }
+        Value::BigInt(input_i) => {
+            let i_real = input_i.to_f64()
+                .ok_or(MathEvaluateError::new(s!("Nepodařilo se odmocnit velké celé číslo")))?;
+            let result_real = i_real.sqrt();
+            let result_int = BigInt::from_f64(result_real);
+
+            if let Some(res_int) = result_int {
+                if res_int.pow(2u32) == input_i {
+                    return Ok(Value::BigInt(res_int));
+                }
+            }
+            return Ok(Value::Real(result_real));
+        }
+        Value::Rational(rat) => {
+            let num = sqrt(Value::BigInt(rat.numerator.clone()))?;
+            let den = sqrt(Value::BigInt(rat.denominator.clone()))?;
+            println!("TEST: {:?} / {:?}", num, den);
+            return  num / den; // Může znovu vzniknout zlomek, nebo i celé nebo reálné číslo
+        },
+        Value::Real(r) => Ok(Value::Real(r.sqrt())),
+        Value::Text(_) => Err(MathEvaluateError::new(s!("sqrt(Text) není platné volání funkce"))),
+        Value::Bool(_) => Err(MathEvaluateError::new(s!("sqrt(Bool) není platné volání funkce"))),
+    }
 }
