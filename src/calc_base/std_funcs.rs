@@ -113,7 +113,6 @@ pub fn sqrt(val: Value) -> Result<Value, MathEvaluateError> {
         Value::Rational(rat) => {
             let num = sqrt(Value::BigInt(rat.numerator.clone()))?;
             let den = sqrt(Value::BigInt(rat.denominator.clone()))?;
-            println!("TEST: {:?} / {:?}", num, den);
             return  num / den; // Může znovu vzniknout zlomek, nebo i celé nebo reálné číslo
         },
         Value::Real(r) => Ok(Value::Real(r.sqrt())),
