@@ -5,7 +5,7 @@ use crate::define_error_type;
 use num_bigint::*;
 
 pub mod value;
-mod rational;
+pub mod rational;
 pub mod func_call;
 pub mod std_funcs;
 pub mod value_algebra;

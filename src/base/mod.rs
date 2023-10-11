@@ -43,6 +43,14 @@ pub trait IAppError: Error {
     fn get_msg(&self) -> &str;
 }
 
+// Výraz expr, který vrací Result<T,E> se přemapuje tak, aby vracel chybu odvozenou od IAppError s
+// konkrétní zprávou
+macro_rules! app_err {
+    ($expr:expr, $errtype: ty, $errmsg: expr) => {
+       $expr.map_err(|_| Box::new(<$errtype>::new(s!($errmsg))) as Box<dyn IAppError>)
+    };
+}
+
 /// Makro vytvoří strukturu s daným názvem odvozenou od IAppError.
 #[macro_export]
 macro_rules! define_error_type {

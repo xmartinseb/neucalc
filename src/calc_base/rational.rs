@@ -9,7 +9,7 @@ use regex::*;
 use crate::s;
 
 // Racionální číslo (zlomek) je chápáno jako dvojice celých čísel. Proto je počítání s ním dokonale přesné.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Rational{
     pub numerator: BigInt,
     pub denominator: BigInt
