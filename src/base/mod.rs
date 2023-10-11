@@ -45,9 +45,17 @@ pub trait IAppError: Error {
 
 // Výraz expr, který vrací Result<T,E> se přemapuje tak, aby vracel chybu odvozenou od IAppError s
 // konkrétní zprávou
+#[macro_export]
 macro_rules! app_err {
     ($expr:expr, $errtype: ty, $errmsg: expr) => {
        $expr.map_err(|_| Box::new(<$errtype>::new(s!($errmsg))) as Box<dyn IAppError>)
+    };
+}
+
+#[macro_export]
+macro_rules! map_err {
+    ($expr:expr, $errtype: ty, $errmsg: expr) => {
+       $expr.map_err(|_| <$errtype>::new(s!($errmsg)))
     };
 }
 
