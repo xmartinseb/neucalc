@@ -31,7 +31,7 @@ checksum = "f665ee40bc4a3c5590afb1e9677db74a508659dfd71e126420da8274909a0167"
 
 [[package]]
 name = "neucalc"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "lazy_static",
  "num-bigint",
