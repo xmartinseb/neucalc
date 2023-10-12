@@ -2,6 +2,7 @@ use std::ops::{Add, Mul, Neg, Sub};
 use crate::calc_base::*;
 use crate::calc_base::rational::Rational;
 use num_traits::cast::ToPrimitive;
+use num_traits::Zero;
 use crate::calc_base::value::Value;
 use crate::s;
 
@@ -128,12 +129,40 @@ impl std::ops::Div<Value> for Value {
     type Output = Result<Value, MathEvaluateError>;
 
     fn div(self, rhs: Value) -> Self::Output {
+
+        // Kontrola dělení nulou aj.
+        match &rhs {
+            Value::Nothing => {}
+            Value::Integer(i) => {
+                if i.is_zero() {
+                    return Err(MathEvaluateError::new(s!("Nelze dělit celým číslem 0")));
+                }
+            }
+            Value::BigInt(i) => {
+                if i.is_zero() {
+                    return Err(MathEvaluateError::new(s!("Nelze dělit bigintem 0")));
+                }
+            }
+            Value::Rational(r) => {
+                if r.numerator.is_zero() {
+                    return Err(MathEvaluateError::new(s!("Nelze dělit racionálním číslem 0")));
+                }
+            }
+            Value::Real(r) => {
+                if r.is_zero() {
+                    return Err(MathEvaluateError::new(s!("Nelze dělit reálným číslem 0")));
+                }
+            }
+            Value::Text(_) => {return Err(MathEvaluateError::new(s!("Nelze dělit textovou hodnotu.")));}
+            Value::Bool(_) => {return Err(MathEvaluateError::new(s!("Nelze dělit booleovskou bodnotu")));}
+        };
+
         let result = match self {
             Value::Nothing => Ok(Value::Nothing),
             Value::Integer(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
-                Value::Integer(y) => Ok(div_ints(x, y)), // Dělení celých čísel může vrátit zlomek, nebo i celé číslo!
-                Value::BigInt(y) => Ok(div_big_ints(&BigInt::from(x), &y)), // Dělení celých čísel může vrátit zlomek, nebo i celé číslo!
+                Value::Integer(y) => Ok(div_ints(x, y)?), // Dělení celých čísel může vrátit zlomek, nebo i celé číslo!
+                Value::BigInt(y) => Ok(div_big_ints(&BigInt::from(x), &y)?), // Dělení celých čísel může vrátit zlomek, nebo i celé číslo!
                 Value::Rational(y) => Ok(Value::Rational(Rational::from_int(x) / y)),
                 Value::Real(y) => Ok(Value::Real(x as f64 / y)),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
@@ -145,8 +174,8 @@ impl std::ops::Div<Value> for Value {
             },
             Value::BigInt(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
-                Value::Integer(y) => Ok(div_big_ints(&x, &BigInt::from(y))), // Dělení celých čísel může vrátit zlomek, nebo i celé číslo!
-                Value::BigInt(y) => Ok(div_big_ints(&x, &y)), // Dělení celých čísel může vrátit zlomek, nebo i celé číslo!
+                Value::Integer(y) => Ok(div_big_ints(&x, &BigInt::from(y))?), // Dělení celých čísel může vrátit zlomek, nebo i celé číslo!
+                Value::BigInt(y) => Ok(div_big_ints(&x, &y)?), // Dělení celých čísel může vrátit zlomek, nebo i celé číslo!
                 Value::Rational(y) => Ok(Value::Rational(Rational::from_bigint(x) / y)),
                 Value::Real(y) => Ok(Value::Real(bi_to_real(&x)?  / y)),
                 Value::Text(y) => Err(MathEvaluateError::new(format!(
@@ -194,13 +223,21 @@ impl std::ops::Div<Value> for Value {
 }
 
 /// Dělení dvou celých čísel může vrátit zlomek (racio. číslo), nebo celé číslo
-fn div_ints(a: i64, b: i64) -> Value {
-    return Value::Rational(Rational::new(a, b)).simplify_type_move().unwrap();
+fn div_ints(a: i64, b: i64) -> Result<Value, MathEvaluateError> {
+    if b == 0 {
+        Err(MathEvaluateError::new(s!("Nulou nelze dělit!")))
+    } else {
+        Ok(Value::Rational(Rational::new(a, b)).simplify_type_move().unwrap())
+    }
 }
 
 /// Dělení dvou celých čísel může vrátit zlomek (racio. číslo), nebo celé číslo
-fn div_big_ints(a: &BigInt, b: &BigInt) -> Value {
-    return Value::Rational(Rational::new_bigint(a.clone(), b.clone())).simplify_type_move().unwrap();
+fn div_big_ints(a: &BigInt, b: &BigInt) -> Result<Value, MathEvaluateError> {
+    if b.is_zero() {
+        Err(MathEvaluateError::new(s!("Nulou nelze dělit!")))
+    } else {
+        Ok(Value::Rational(Rational::new_bigint(a.clone(), b.clone())).simplify_type_move().unwrap())
+    }
 }
 
 impl Mul<Value> for Value {
@@ -419,7 +456,7 @@ impl Value {
             Value::BigInt(_) => Err(MathEvaluateError::new(s!("Mocnění velkých celých čísel není povoleno"))),
             Value::Rational(x) => match rhs {
                 Value::Nothing => Ok(Value::Nothing),
-                Value::Integer(y) => Ok(Value::Real(to_real(&x)?.powf(*y as f64))), // TODO: Rational pote upravit: Q^Z € Q
+                Value::Integer(y) => Ok(Value::Rational(x.pow_int(*y))),
                 Value::BigInt(_) => Err(MathEvaluateError::new(s!("Mocnění velkých celých čísel není povoleno"))),
                 Value::Rational(y) => Ok(Value::Real(to_real(&x)?.powf( to_real(y)?))),
                 Value::Real(y) => Ok(Value::Real(to_real(&x)?.powf(*y))),

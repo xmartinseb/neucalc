@@ -2,6 +2,7 @@ use std::fmt::Display;
 use crate::calc_base::*;
 use crate::calc_base::rational::Rational;
 use num_traits::cast::ToPrimitive;
+use num_traits::Zero;
 use crate::s;
 
 /// Hodnota, se kterou se pracuje při výpočtu matematického výrazu, může mít různé typy.
@@ -88,9 +89,8 @@ impl Value {
             return Ok(val_const);
         } else if let Ok(boolean) = value.parse::<bool>() {
             return Ok(Value::Bool(boolean));
-        } /*else if let Ok(func_call) = strategy.parse_func_call(value) {
-            return Ok(Value::Func(func_call));
-        }*/ else if let Ok(real) = value.parse::<f64>() { //Reálná čísla by neměla být parsovatelná z konzole
+        } else if let Ok(real) = value.parse::<f64>() {
+            //Reálná čísla by neměla být parsovatelná z konzole.
             println!("Varování! Vstup z konzole se načetl jako reálné číslo. Zpravidla se načítá \
             racionální číslo. Výsledek nemusí být úplně přesný!");
             return Ok(Value::Real(real));
@@ -115,6 +115,9 @@ impl Value {
                 }
             }
             Value::Rational(r) => {
+                if r.numerator.is_zero() {
+                    return Ok(Value::Integer(0));
+                }
                 let r = r.reduce_move();
                 if let Some(as_bigint) = r.to_bigint() {
                     if let Some(as_int) = as_bigint.to_i64() {

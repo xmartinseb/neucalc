@@ -2,7 +2,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::str::FromStr;
 use num_bigint::BigInt;
-use crate::calc_base::{MathParseError};
+use crate::calc_base::{MathEvaluateError, MathParseError};
 use num_integer::Integer;
 use num_traits::{Signed, ToPrimitive};
 use regex::*;
@@ -73,6 +73,33 @@ impl Rational {
             None
         }
     }
+
+    pub fn pow_int(&self, exponent: i64) -> Rational {
+        if exponent >= 0 {
+            let exp = exponent as u32;
+            Rational {
+                numerator: self.numerator.pow(exp),
+                denominator: self.denominator.pow(exp)
+            }.reduce_move()
+        } else {
+            let exp = (-exponent) as u32;
+            Rational {
+                numerator: self.denominator.pow(exp),
+                denominator: self.numerator.pow(exp)
+            }.reduce_move()
+        }
+    }
+
+    pub fn pow_bigint(&self, exponent: BigInt) -> Result<Rational, MathEvaluateError> {
+        match exponent.to_i64() {
+            None => {
+                Err(MathEvaluateError::new(s!("Mocnění velkých čísel není povoleno")))
+            }
+            Some(i) => {
+                Ok(self.pow_int(i))
+            }
+        }
+    }
 }
 
 /// Každé číslo napsané posloupností číslic je racionální, např. -52.464864686
@@ -86,7 +113,7 @@ impl FromStr for Rational {
         let captures = num_regex.captures(s)
             .ok_or(MathParseError::new(s!("Nepodařilo se extrahovat části čísla regulárním výrazem")))?;
 
-        let p1_str = captures.name("p1").ok_or(MathParseError::new(s!("Racionální číslo má mít tvar #.#")))?.as_str().trim().trim_start_matches('0');
+        let p1_str = captures.name("p1").ok_or(MathParseError::new(s!("Racionální číslo má mít tvar #.#")))?.as_str().trim();
         let p2_str = captures.name("p2").ok_or(MathParseError::new(s!("Racionální číslo má mít tvar #.#")))?.as_str().trim().trim_end_matches('0');
         return if p2_str.is_empty() { // Byly to jen nuly
             let numerator = map_err!(p1_str.parse::<BigInt>(), MathParseError,"Nepodařilo se převést výraz na racionální číslo")?;
