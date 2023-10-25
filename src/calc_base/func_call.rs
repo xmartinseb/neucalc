@@ -34,7 +34,7 @@ impl FuncCall {
                                    self.params[1].clone().simplify_type_move()?,
                                        self.params[2].clone())
                 } else {
-                    Err(MathEvaluateError::new(format!("Funkce '{}' vyžaduje 1 parametry", self.name)))
+                    Err(MathEvaluateError::new(format!("Funkce '{}' vyžaduje 3 parametry (int, int, bool)", self.name)))
                 }
             },
             "nck" => {
@@ -42,7 +42,7 @@ impl FuncCall {
                     std_funcs::nck(self.params[0].clone().simplify_type_move()?,
                                    self.params[1].clone().simplify_type_move()?)
                 } else {
-                    Err(MathEvaluateError::new(format!("Funkce '{}' vyžaduje 1 parametry", self.name)))
+                    Err(MathEvaluateError::new(format!("Funkce '{}' vyžaduje 2 parametry (int, int)", self.name)))
                 }
             },
             "fact" => {
