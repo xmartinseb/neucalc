@@ -16,6 +16,13 @@ pub struct Rational{
 }
 
 impl Rational {
+    pub fn abs(&self) -> Rational {
+        Rational {
+            numerator: self.numerator.abs(),
+            denominator: self.denominator.abs()
+        }
+    }
+
     pub fn to_real(&self) -> Option<f64> {
         Some(self.numerator.to_f64()?
             / self.denominator.to_f64()?)
@@ -67,7 +74,7 @@ impl Rational {
 
     /// Když má zlomek jmenovatel 1, dá se považovat za celé číslo
     pub fn to_bigint(&self) -> Option<BigInt> {
-        return if self.denominator == BigInt::from(1) {
+        return if self.denominator.abs() == BigInt::from(1) {
             Some(self.numerator.clone())
         } else {
             None

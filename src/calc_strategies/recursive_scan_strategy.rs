@@ -10,7 +10,8 @@ use crate::calc_strategies::ICalculatorStrategy;
 use crate::s;
 
 /// Strategie, která jen čte výraz jako text a rekurzivně spočítá výsledek. Neprovádí žádné
-/// transformace na stromovou strukturu aj. Výhodou je jednoduchost, ale pro velmi dlouhé výrazy je pomalá.
+/// transformace na stromovou strukturu aj. Výhodou je jednoduchost, ale pro velmi dlouhé
+/// výrazy je pomalá a navíc je kvůli mnoha rekurzím náchylná na chybu StackOverflow.
 #[derive(Default, Debug)]
 pub struct RecursiveScanStrategy<'expr> {
     math_expr: Expr<'expr>

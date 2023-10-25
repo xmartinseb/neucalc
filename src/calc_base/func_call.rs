@@ -21,6 +21,37 @@ impl FuncCall {
     /// nepovede výpočet, vrátí chybu.
     pub fn eval(&self) -> Result<Value, MathEvaluateError> {
         match self.name.as_str() {
+            "abs" => {
+                if self.params.len() == 1 {
+                    std_funcs::abs(self.params[0].clone().simplify_type_move()?)
+                } else {
+                    Err(MathEvaluateError::new(format!("Funkce '{}' vyžaduje 1 parametr", self.name)))
+                }
+            },
+            "comb" => {
+                if self.params.len() == 3 {
+                    std_funcs::comb(self.params[0].clone().simplify_type_move()?,
+                                   self.params[1].clone().simplify_type_move()?,
+                                       self.params[2].clone())
+                } else {
+                    Err(MathEvaluateError::new(format!("Funkce '{}' vyžaduje 1 parametry", self.name)))
+                }
+            },
+            "nck" => {
+                if self.params.len() == 2 {
+                    std_funcs::nck(self.params[0].clone().simplify_type_move()?,
+                                   self.params[1].clone().simplify_type_move()?)
+                } else {
+                    Err(MathEvaluateError::new(format!("Funkce '{}' vyžaduje 1 parametry", self.name)))
+                }
+            },
+            "fact" => {
+                if self.params.len() == 1 {
+                    std_funcs::fact(self.params[0].clone().simplify_type_move()?)
+                } else {
+                    Err(MathEvaluateError::new(format!("Funkce '{}' vyžaduje 1 parametr", self.name)))
+                }
+            },
             "max" => {
                 if self.params.len() == 0 {
                     Err(MathEvaluateError::new(format!("Funkce '{}' vyžaduje aspoň 1 parametr", self.name)))
