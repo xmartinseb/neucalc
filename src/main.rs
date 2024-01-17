@@ -11,7 +11,7 @@ mod calculator;
 
 fn main() {
     print_nice_header();
-    let calculator = Calculator::<RecursiveScanStrategy>::new();
+    let calculator = Calculator::<RecursiveScanStrategy>::default();
     let stdin = io::stdin();
 
     loop {

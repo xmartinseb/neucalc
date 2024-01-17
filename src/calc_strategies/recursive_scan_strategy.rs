@@ -19,7 +19,6 @@ pub struct RecursiveScanStrategy<'expr> {
 
 impl<'expr> ICalculatorStrategy<'expr> for RecursiveScanStrategy<'expr> {
     ///Tato strategie nepoužívá žádnou speciální strukturu, jen rekurzivně skenuje text
-    /// Tato metoda jen částečně zvaliduje správnost výrazu
     fn parse(&mut self, math_expr: Expr<'expr>) -> Result<(), MathParseError> {
         self.math_expr = math_expr;
         Ok(())

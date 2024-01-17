@@ -19,9 +19,9 @@ impl<'expr, TStrategy: ICalculatorStrategy<'expr>> Calculator<'expr, TStrategy> 
 
         // Výraz prošel validační procedurou, nyní je považován za syntakticky správný
         let mut calc_strategy : TStrategy = Default::default();
-        return match calc_strategy.parse(Expr::new(math_expr)) {
+        return match calc_strategy.parse(Expr::new(math_expr)) { // 1. krok strategie: parse
             Ok(_) => {
-                match calc_strategy.evaluate() {
+                match calc_strategy.evaluate() { // 2. krok strategie: evaluace parsovaneho vyrazu
                     Ok(value) => Ok(value),
                     Err(e) => Err(Box::new(e)),
                 }
@@ -29,17 +29,13 @@ impl<'expr, TStrategy: ICalculatorStrategy<'expr>> Calculator<'expr, TStrategy> 
             Err(parse_err) => { Err(Box::new(parse_err)) }
         }
     }
-
-    pub fn new() -> Self {
-        return Self{
-            g: PhantomData::default(),
-            h: PhantomData::default(),
-        };
-    }
 }
 
 impl<'expr, TStagegy: ICalculatorStrategy<'expr>> Default for Calculator<'expr, TStagegy> {
     fn default() -> Self {
-        Calculator::new()
+        Calculator {
+            g: Default::default(),
+            h: Default::default()
+        }
     }
 }
