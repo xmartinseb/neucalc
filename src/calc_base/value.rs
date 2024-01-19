@@ -75,6 +75,20 @@ fn value_is_string_literal(expr: &str) -> Option<&str> {
 }
 
 impl Value {
+    pub fn as_real(&self) -> Result<f64, MathEvaluateError> {
+        match self {
+            Value::Nothing => {
+                Err(MathEvaluateError::new(s!("Hodnota Nothing nelze převést na reálné číslo!")))
+            }
+            Value::Integer(i) => { Ok(*i as f64) }
+            Value::BigInt(i) => { Ok(i.to_f64().ok_or(MathEvaluateError::new(s!("ln: Nepodařilo se převést BigInt na reálné číslo")))?) }
+            Value::Rational(q) => { Ok(q.to_real().ok_or(MathEvaluateError::new(s!("ln: Nepodařilo se převést zlomek na reálné číslo")))?) }
+            Value::Real(r) => { Ok(*r) }
+            Value::Text(_) => { Err(MathEvaluateError::new(s!("Hodnota Text nelze převést na reálné číslo!"))) }
+            Value::Bool(_) => { Err(MathEvaluateError::new(s!("Hodnota Bool nelze převést na reálné číslo!"))) }
+        }
+    }
+    
     pub fn parse<'expr>(value: &str) -> Result<Self, MathEvaluateError> {
         let value = value.trim();
         if let Some(string_value) = value_is_string_literal(value) {

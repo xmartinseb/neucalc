@@ -21,6 +21,13 @@ impl FuncCall {
     /// nepovede výpočet, vrátí chybu.
     pub fn eval(&self) -> Result<Value, MathEvaluateError> {
         match self.name.as_str() {
+            "ln" => {
+                if self.params.len() == 1 {
+                    std_funcs::ln(self.params[0].clone().simplify_type_move()?)
+                } else {
+                    Err(MathEvaluateError::new(format!("Funkce '{}' vyžaduje 1 parametr", self.name)))
+                }
+            },
             "abs" => {
                 if self.params.len() == 1 {
                     std_funcs::abs(self.params[0].clone().simplify_type_move()?)

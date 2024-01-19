@@ -7,6 +7,22 @@ use crate::calc_base::rational::Rational;
 use crate::calc_base::value::Value;
 use crate::s;
 
+pub fn ln(x: Value) -> Result<Value, MathEvaluateError> {
+    // let real = x.as_real()?;
+    // Ok(Value::Real(real.ln()))
+    match x {
+        Value::Nothing => Err(MathEvaluateError::new(s!("ln(Nothing) není platné volání funkce"))),
+        Value::Integer(i) => Ok(Value::Real((i as f64).ln())),
+        Value::BigInt(i) => Ok(Value::Real(i.to_f64()
+            .ok_or(MathEvaluateError::new(s!("ln: Nepodařilo se převést BigInt na reálné číslo")))?.ln())),
+        Value::Rational(q) => Ok(Value::Real(q.to_real()
+            .ok_or(MathEvaluateError::new(s!("ln: Nepodařilo se převést zlomek  na reálné číslo")))?.ln())),
+        Value::Real(r) => Ok(Value::Real(r.ln())),
+        Value::Text(_) => Err(MathEvaluateError::new(s!("ln(Text) není platné volání funkce"))),
+        Value::Bool(_) => Err(MathEvaluateError::new(s!("ln(Bool) není platné volání funkce")))
+    }
+}
+
 pub fn abs(x: Value) -> Result<Value, MathEvaluateError> {
     match x {
         Value::Nothing => Err(MathEvaluateError::new(s!("abs(Nothing) není platné volání funkce"))),
