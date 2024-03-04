@@ -1,9 +1,10 @@
-use std::fmt::Display;
-use crate::calc_base::*;
+use crate::base::CalcError;
 use crate::calc_base::rational::Rational;
+use crate::calc_base::*;
+use crate::s;
 use num_traits::cast::ToPrimitive;
 use num_traits::Zero;
-use crate::s;
+use std::fmt::Display;
 
 /// Hodnota, se kterou se pracuje při výpočtu matematického výrazu, může mít různé typy.
 /// Jsou na ní definovány matematické operace +,-,*,/, pow
@@ -16,6 +17,14 @@ pub enum Value {
     Real(f64),
     Text(String),
     Bool(bool),
+}
+
+// Zkrácený zápis vytvoření racionálního čísla
+#[macro_export]
+macro_rules! rat {
+    ($a:literal / $b:literal) => {
+        Value::Rational(Rational::new($a, $b))
+    };
 }
 
 /// Platné konstanty
@@ -49,7 +58,7 @@ fn is_named_const(name: &str) -> Option<Value> {
         "sqrt3" => Some(consts::SQRT3.clone()),
         "i64max" => Some(consts::I64MAX.clone()),
         "i64min" => Some(consts::I64MIN.clone()),
-        _ => None
+        _ => None,
     };
 }
 
@@ -71,28 +80,36 @@ fn value_is_string_literal(expr: &str) -> Option<&str> {
         Some(&expr[1..expr.len() - 1])
     } else {
         None
-    }
+    };
 }
 
 impl Value {
-    pub fn as_real(&self) -> Result<f64, MathEvaluateError> {
+    pub fn as_real(&self) -> Result<f64, CalcError> {
         match self {
-            Value::Nothing => {
-                Err(MathEvaluateError::new(s!("Hodnota Nothing nelze převést na reálné číslo!")))
-            }
-            Value::Integer(i) => { Ok(*i as f64) }
-            Value::BigInt(i) => { Ok(i.to_f64().ok_or(MathEvaluateError::new(s!("ln: Nepodařilo se převést BigInt na reálné číslo")))?) }
-            Value::Rational(q) => { Ok(q.to_real().ok_or(MathEvaluateError::new(s!("ln: Nepodařilo se převést zlomek na reálné číslo")))?) }
-            Value::Real(r) => { Ok(*r) }
-            Value::Text(_) => { Err(MathEvaluateError::new(s!("Hodnota Text nelze převést na reálné číslo!"))) }
-            Value::Bool(_) => { Err(MathEvaluateError::new(s!("Hodnota Bool nelze převést na reálné číslo!"))) }
+            Value::Nothing => Err(CalcError::EvaluateErr(s!(
+                "Hodnota Nothing nelze převést na reálné číslo!"
+            ))),
+            Value::Integer(i) => Ok(*i as f64),
+            Value::BigInt(i) => Ok(i.to_f64().ok_or(CalcError::EvaluateErr(s!(
+                "ln: Nepodařilo se převést BigInt na reálné číslo"
+            )))?),
+            Value::Rational(q) => Ok(q.to_real().ok_or(CalcError::EvaluateErr(s!(
+                "ln: Nepodařilo se převést zlomek na reálné číslo"
+            )))?),
+            Value::Real(r) => Ok(*r),
+            Value::Text(_) => Err(CalcError::EvaluateErr(s!(
+                "Hodnota Text nelze převést na reálné číslo!"
+            ))),
+            Value::Bool(_) => Err(CalcError::EvaluateErr(s!(
+                "Hodnota Bool nelze převést na reálné číslo!"
+            ))),
         }
     }
-    
-    pub fn parse<'expr>(value: &str) -> Result<Self, MathEvaluateError> {
+
+    pub fn parse<'expr>(value: &str) -> Result<Self, CalcError> {
         let value = value.trim();
         if let Some(string_value) = value_is_string_literal(value) {
-            return Ok(Value::Text(s!(string_value)))
+            return Ok(Value::Text(s!(string_value)));
         } else if let Ok(integer) = value.parse::<i64>() {
             return Ok(Value::Integer(integer));
         } else if let Ok(biginteger) = value.parse::<BigInt>() {
@@ -105,22 +122,32 @@ impl Value {
             return Ok(Value::Bool(boolean));
         } else if let Ok(real) = value.parse::<f64>() {
             //Reálná čísla by neměla být parsovatelná z konzole.
-            println!("Varování! Vstup z konzole se načetl jako reálné číslo. Zpravidla se načítá \
-            racionální číslo. Výsledek nemusí být úplně přesný!");
+            println!(
+                "Varování! Vstup z konzole se načetl jako reálné číslo. Zpravidla se načítá \
+            racionální číslo. Výsledek nemusí být úplně přesný!"
+            );
             return Ok(Value::Real(real));
         }
-        Err(MathEvaluateError::new(format!("Výraz '{value}' není platná hodnota.")))
+        Err(CalcError::EvaluateErr(format!(
+            "Výraz '{value}' není platná hodnota."
+        )))
     }
 
     // V některých případech lze považovat BigInteger za Integer. Někdy je zase zlomek
     // celým číslem. Tato metoda najde co nejjednodušší typ.
-    pub fn simplify_type_move(self) -> Result<Self, MathEvaluateError> {
+    pub fn simplify_type_move(self) -> Result<Self, CalcError> {
         let val = match self {
             Value::Nothing => self,
             Value::Integer(_) => self,
             Value::Text(_) => self,
             Value::Bool(_) => self,
-            Value::Real(r) => if r == 0.0 {Value::Integer(0)} else {self},
+            Value::Real(r) => {
+                if r == 0.0 {
+                    Value::Integer(0)
+                } else {
+                    self
+                }
+            }
             Value::BigInt(b) => {
                 if let Some(i) = b.to_i64() {
                     Value::Integer(i)
@@ -139,7 +166,9 @@ impl Value {
                     } else {
                         Value::BigInt(as_bigint)
                     }
-                } else { Value::Rational(r) }
+                } else {
+                    Value::Rational(r)
+                }
             }
         };
 
@@ -166,4 +195,3 @@ impl Display for Value {
         }
     }
 }
-

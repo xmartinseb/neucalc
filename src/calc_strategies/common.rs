@@ -1,6 +1,5 @@
-use crate::base::IAppError;
+use crate::base::CalcError;
 use crate::calc_base::expr::Expr;
-use crate::calc_base::MathParseError;
 use crate::s;
 
 /// Pokud je symbol operátor, vrací jeho prioritu, jinak vrací 0
@@ -11,7 +10,7 @@ pub fn is_oper(symbol: char) -> i32 {
         '*' => 2,
         '/' => 2,
         '^' => 3,
-        _ => 0
+        _ => 0,
     }
 }
 
@@ -30,7 +29,7 @@ pub fn trim_brackets(expr: Expr) -> Expr {
 
 /// Ještě před zahájením výpočtu je potřeba zkontrolovat správnost výrazu. Tj. správnost postavení
 /// závorek a stringů (každý string musí mít ukončovací uvozovku)
-pub fn check_brackets_and_quots(expr: &str) -> Result<(), Box<dyn IAppError>> {
+pub fn check_brackets_and_quots(expr: &str) -> Result<(), CalcError> {
     let mut is_in_string = false;
     let mut le = 0;
     let mut ri = 0;
@@ -43,19 +42,25 @@ pub fn check_brackets_and_quots(expr: &str) -> Result<(), Box<dyn IAppError>> {
             } else if c == ')' {
                 ri += 1;
                 if ri > le {
-                    return Err(Box::new(MathParseError::new(format!("Na pozici {i} počet pravých závorek předběhl počet levých závorek"))));
+                    return Err(CalcError::ParseErr(format!(
+                        "Na pozici {i} počet pravých závorek předběhl počet levých závorek"
+                    )));
                 }
             }
         }
     }
 
     return if is_in_string {
-        Err(Box::new(MathParseError::new(s!("Textovému výrazu chybí ukončovací uvozovka."))))
+        Err(CalcError::ParseErr(s!(
+            "Textovému výrazu chybí ukončovací uvozovka."
+        )))
     } else if le == ri {
         Ok(())
     } else {
-        Err(Box::new(MathParseError::new(s!("Počet levých a pravých závorek musí být stejný"))))
-    }
+        Err(CalcError::ParseErr(s!(
+            "Počet levých a pravých závorek musí být stejný"
+        )))
+    };
 }
 
 pub fn check_brackets_and_quots_simple(expr: &str) -> bool {
@@ -71,7 +76,7 @@ pub fn check_brackets_and_quots_simple(expr: &str) -> bool {
             } else if c == ')' {
                 ri += 1;
                 if ri > le {
-                    return false
+                    return false;
                 }
             }
         }
@@ -83,5 +88,5 @@ pub fn check_brackets_and_quots_simple(expr: &str) -> bool {
         true
     } else {
         false
-    }
+    };
 }

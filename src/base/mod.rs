@@ -1,16 +1,19 @@
-use std::error::Error;
+use num_bigint::BigInt;
+use std::str::FromStr;
 
-/// Makro převede text typu &str na strukturu String
+/// Makro převede něco na strukturu String
 #[macro_export]
 macro_rules! s {
-    ($str:expr) => {String::from($str)};
+    ($str:expr) => {
+        String::from($str)
+    };
 }
 
 /// Flushne výstupní konzoli, čímž se vytiskne vše, co je v bufferu.
 #[macro_export]
 macro_rules! flush_stdout {
     () => {
-       std::io::Write::flush(&mut std::io::stdout()).unwrap();
+        std::io::Write::flush(&mut std::io::stdout()).unwrap();
     };
 }
 
@@ -31,80 +34,24 @@ macro_rules! sprint {
 #[macro_export]
 macro_rules! sprintln {
     ($expr:tt) => {
-       println!("{}", $expr)
+        println!("{}", $expr)
     };
     ($expr:expr) => {
-       println!("{}", $expr)
+        println!("{}", $expr)
     };
 }
 
-/// Základní rozhraní chyb definovaných v aplikaci
-pub trait IAppError: Error {
-    fn get_msg(&self) -> &str;
-}
+#[derive(thiserror::Error, Debug)]
+pub enum CalcError {
+    #[error("Chyba vyhodnocení matematického výrazu: {0}")]
+    EvaluateErr(String),
 
-// Výraz expr, který vrací Result<T,E> se přemapuje tak, aby vracel chybu odvozenou od IAppError s
-// konkrétní zprávou
-#[macro_export]
-macro_rules! app_err {
-    ($expr:expr, $errtype: ty, $errmsg: expr) => {
-       $expr.map_err(|_| Box::new(<$errtype>::new(s!($errmsg))) as Box<dyn IAppError>)
-    };
-}
+    #[error("Chyba volání funkce: {0}")]
+    FuncCallErr(String),
 
-#[macro_export]
-macro_rules! map_err {
-    ($expr:expr, $errtype: ty, $errmsg: expr) => {
-       $expr.map_err(|_| <$errtype>::new(s!($errmsg)))
-    };
-}
+    #[error("Syntaktická chyba matematického výrazu: {0}")]
+    ParseErr(String),
 
-/// Makro vytvoří strukturu s daným názvem odvozenou od IAppError.
-#[macro_export]
-macro_rules! define_error_type {
-    ($err_type_name:ident) => {
-        #[derive(Debug)]
-        pub struct $err_type_name {
-            msg: String,
-            inner: Option<Box<dyn Error>>,
-        }
-
-        impl Display for $err_type_name {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "{}", self.msg)
-            }
-        }
-
-        impl Error for $err_type_name {
-            fn source(&self) -> Option<&(dyn Error + 'static)> {
-                match &self.inner {
-                    Some(inn) => Some(inn.as_ref()),
-                    None => None,
-                }
-            }
-        }
-
-        impl IAppError for $err_type_name {
-            fn get_msg(&self) -> &str {
-                &self.msg
-            }
-
-            // fn get_inner(&self) -> &Option<Box<dyn Error>> {
-            //     &self.inner
-            // }
-        }
-
-        impl $err_type_name {
-            pub fn new(msg: String) -> Self {
-                Self { msg, inner: None }
-            }
-
-            pub fn new_with_inner(msg: String, inner: Box<dyn Error>) -> Self {
-                Self {
-                    msg,
-                    inner: Some(inner),
-                }
-            }
-        }
-    };
+    #[error("Nepodařilo se převést text na BigInt.")]
+    ParseBigIntErr(#[source] <BigInt as FromStr>::Err),
 }

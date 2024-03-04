@@ -1,34 +1,33 @@
-use std::ops::Neg;
-use regex::Regex;
-use crate::base::IAppError;
-use crate::calc_base::{MathEvaluateError, MathParseError};
+use crate::base::CalcError;
 use crate::calc_base::expr::Expr;
 use crate::calc_base::func_call::FuncCall;
 use crate::calc_base::value::Value;
 use crate::calc_strategies::common::*;
 use crate::calc_strategies::ICalculatorStrategy;
 use crate::s;
+use regex::Regex;
+use std::ops::Neg;
 
 /// Strategie, která jen čte výraz jako text a rekurzivně spočítá výsledek. Neprovádí žádné
 /// transformace na stromovou strukturu aj. Výhodou je jednoduchost, ale pro velmi dlouhé
 /// výrazy je pomalá a navíc je kvůli mnoha rekurzím náchylná na chybu StackOverflow.
 #[derive(Default, Debug)]
 pub struct RecursiveScanStrategy<'expr> {
-    math_expr: Expr<'expr>
+    math_expr: Expr<'expr>,
 }
 
 impl<'expr> ICalculatorStrategy<'expr> for RecursiveScanStrategy<'expr> {
     ///Tato strategie nepoužívá žádnou speciální strukturu, jen rekurzivně skenuje text
-    fn parse(&mut self, math_expr: Expr<'expr>) -> Result<(), MathParseError> {
+    fn parse(&mut self, math_expr: Expr<'expr>) -> Result<(), CalcError> {
         self.math_expr = math_expr;
         Ok(())
     }
 
-    fn evaluate(&mut self) -> Result<Value, MathEvaluateError> {
+    fn evaluate(&mut self) -> Result<Value, CalcError> {
         self.evaluate_rec_simplify(self.math_expr.dupl())
     }
 
-    fn parse_func_call(&self, expr: Expr) -> Result<FuncCall, Box<dyn IAppError>>{
+    fn parse_func_call(&self, expr: Expr) -> Result<FuncCall, CalcError> {
         let func_call_regex = Regex::new(r"^(?<fname>[a-zA-Z]+) *\((?<params>.*)\)$").unwrap();
         let captures = ok_or_error(func_call_regex.captures(expr.as_str()))?;
 
@@ -43,15 +42,17 @@ impl<'expr> ICalculatorStrategy<'expr> for RecursiveScanStrategy<'expr> {
         return Ok(FuncCall::new(func_name, params_vec));
 
         // Pomocná funkce na vyhazování chyb
-        fn ok_or_error<T>(opts: Option<T>) -> Result<T, Box<dyn IAppError>>{
-            opts.ok_or(Box::new(MathEvaluateError::new(s!("Výraz nemá tvar volání funkce: název(parametry)"))))
+        fn ok_or_error<T>(opts: Option<T>) -> Result<T, CalcError> {
+            opts.ok_or(CalcError::EvaluateErr(s!(
+                "Výraz nemá tvar volání funkce: název(parametry)"
+            )))
         }
     }
 }
 
 impl<'expr> RecursiveScanStrategy<'expr> {
     /// Parametry, které jsou zadány oddělené čárkami, se převedou na vektor parametrů.
-    fn parse_params_str(&self, params_str: Expr) -> Result<Vec<Value>, Box<dyn IAppError>> {
+    fn parse_params_str(&self, params_str: Expr) -> Result<Vec<Value>, CalcError> {
         let mut delims = vec![]; // Pozice, podle nichz se string roztrha na jednotlive parametry
         let mut curr_depth = 0; // Carky, ktere oddeluji parametry musi samozrejme byt mimo zavorky
         let mut is_in_string = false; // Ty carky nesmi byt ani ve stringu
@@ -61,104 +62,124 @@ impl<'expr> RecursiveScanStrategy<'expr> {
                 '(' => curr_depth += 1,
                 ')' => curr_depth -= 1,
                 '"' => is_in_string = !is_in_string,
-                ',' => if curr_depth == 0 && !is_in_string {
-                    delims.push(bytes_scanned);
+                ',' => {
+                    if curr_depth == 0 && !is_in_string {
+                        delims.push(bytes_scanned);
+                    }
                 }
                 _ => {}
             };
             bytes_scanned += c.len_utf8();
         }
         let mut params = Vec::<Value>::new();
-        if delims.len() == 0 { // Parametr je jen jeden, neni potreba nic trhat. Cely string je jeden parametr
+        if delims.len() == 0 {
+            // Parametr je jen jeden, neni potreba nic trhat. Cely string je jeden parametr
             params.push(parse_param(self, params_str.dupl())?);
-        } else { // Pamateru je vic, string se musi rozthrat
+        } else {
+            // Pamateru je vic, string se musi rozthrat
             let mut last_substring_begin = 0usize;
             for substring_end in delims {
-                params.push(parse_param(self, Expr::new(&params_str.as_str()[last_substring_begin..substring_end]))?);
+                params.push(parse_param(
+                    self,
+                    Expr::new(&params_str.as_str()[last_substring_begin..substring_end]),
+                )?);
                 last_substring_begin = substring_end + 1;
             }
-            params.push(parse_param(self, Expr::new(&params_str.as_str()[last_substring_begin..]))?);
+            params.push(parse_param(
+                self,
+                Expr::new(&params_str.as_str()[last_substring_begin..]),
+            )?);
         }
 
         return Ok(params);
 
         // Pomocná funkce, která parsuje jeden parametr. Vrátí ho jako value, nebo vrátí chybu.
-        fn parse_param(this: &RecursiveScanStrategy, paramstr: Expr) -> Result<Value, Box<dyn IAppError>> {
-            return match this.evaluate_rec_simplify(paramstr) {
-                Ok(param) => { Ok(param) }
-                Err(e) => {
-                    let err: Box<dyn IAppError> = Box::new(e);
-                    Err(err)
-                }
-            }
+        fn parse_param(this: &RecursiveScanStrategy, paramstr: Expr) -> Result<Value, CalcError> {
+            this.evaluate_rec_simplify(paramstr)
         }
     }
 
     /// Používá se k rekurzivnímu vyhodnocení výrazu. Výraz vyhodnotí a zjednoduší
     /// (např. zlomek na celé číslo, pokud to jde. BigInt na integer apod.)
     #[inline]
-    fn evaluate_rec_simplify(&self, expr: Expr) -> Result<Value, MathEvaluateError> {
+    fn evaluate_rec_simplify(&self, expr: Expr) -> Result<Value, CalcError> {
         self.evaluate_rec(expr)?.simplify_type_move()
     }
 
     /// Používá se k rekurzivnímu vyhodnocení výrazu.
-    fn evaluate_rec(&self, expr: Expr) -> Result<Value, MathEvaluateError> {
+    fn evaluate_rec(&self, expr: Expr) -> Result<Value, CalcError> {
         let expr = trim_brackets(expr);
         match Self::find_oper(expr.dupl()) {
-            None => { // Není-li ve výrazu dělící operátor, pak to bude buď volání funkce, nebo atomická hodnota
+            None => {
+                // Není-li ve výrazu dělící operátor, pak to bude buď volání funkce, nebo atomická hodnota
                 return if let Ok(func_call) = self.parse_func_call(expr.dupl()) {
                     func_call.eval()
                 } else {
                     Value::parse(expr.as_str())?.simplify_type_move()
-                }
+                };
             }
             Some((oper_symbol, oper_pos)) => {
                 let (left, right) = Self::halve_expr(expr, oper_pos);
                 if left.is_empty() && right.is_empty() {
-                    return Err(MathEvaluateError::new(format!("Operátor {oper_symbol} na pozici {oper_pos} nemá žádné operandy")));
+                    return Err(CalcError::EvaluateErr(format!(
+                        "Operátor {oper_symbol} na pozici {oper_pos} nemá žádné operandy"
+                    )));
                 }
                 match oper_symbol {
                     '+' => {
                         return if left.is_empty() {
                             self.evaluate_rec_simplify(right)
                         } else if right.is_empty() {
-                            Err(MathEvaluateError::new(s!("Operátoru + chybí pravý operand")))
+                            Err(CalcError::EvaluateErr(s!(
+                                "Operátoru + chybí pravý operand"
+                            )))
                         } else {
                             self.evaluate_rec_simplify(left)? + self.evaluate_rec_simplify(right)?
                         }
-                    },
+                    }
                     '-' => {
                         return if left.is_empty() {
                             let r = self.evaluate_rec_simplify(right)?;
                             r.neg()
                         } else if right.is_empty() {
-                            Err(MathEvaluateError::new(s!("Operátoru - chybí pravý operand")))
+                            Err(CalcError::EvaluateErr(s!(
+                                "Operátoru - chybí pravý operand"
+                            )))
                         } else {
                             self.evaluate_rec_simplify(left)? - self.evaluate_rec_simplify(right)?
                         }
-                    },
+                    }
                     '*' => {
                         return if left.is_empty() || right.is_empty() {
-                            Err(MathEvaluateError::new(String::from("Operátor * vyžaduje dva operandy")))
+                            Err(CalcError::EvaluateErr(String::from(
+                                "Operátor * vyžaduje dva operandy",
+                            )))
                         } else {
                             self.evaluate_rec_simplify(left)? * self.evaluate_rec_simplify(right)?
                         }
-                    },
+                    }
                     '/' => {
                         return if left.is_empty() || right.is_empty() {
-                            Err(MathEvaluateError::new(String::from("Operátor / vyžaduje dva operandy")))
+                            Err(CalcError::EvaluateErr(String::from(
+                                "Operátor / vyžaduje dva operandy",
+                            )))
                         } else {
                             self.evaluate_rec_simplify(left)? / self.evaluate_rec_simplify(right)?
                         }
-                    },
+                    }
                     '^' => {
                         return if left.is_empty() || right.is_empty() {
-                            Err(MathEvaluateError::new(String::from("Operátor ^ vyžaduje dva operandy")))
+                            Err(CalcError::EvaluateErr(String::from(
+                                "Operátor ^ vyžaduje dva operandy",
+                            )))
                         } else {
-                            self.evaluate_rec_simplify(left)?.pow(&self.evaluate_rec_simplify(right)?)
+                            self.evaluate_rec_simplify(left)?
+                                .pow(&self.evaluate_rec_simplify(right)?)
                         }
-                    },
-                    _ => Err(MathEvaluateError::new(format!("Znak '{oper_symbol}' není definovaný operátor")))
+                    }
+                    _ => Err(CalcError::EvaluateErr(format!(
+                        "Znak '{oper_symbol}' není definovaný operátor"
+                    ))),
                 }
             }
         }
@@ -168,7 +189,10 @@ impl<'expr> RecursiveScanStrategy<'expr> {
         if oper_pos == 0 {
             (Expr::new(""), Expr::new(&expr.as_str()[1..].trim()))
         } else {
-            (Expr::new(&expr.as_str()[..oper_pos].trim()), Expr::new(&expr.as_str()[oper_pos + 1..]))
+            (
+                Expr::new(&expr.as_str()[..oper_pos].trim()),
+                Expr::new(&expr.as_str()[oper_pos + 1..]),
+            )
         }
     }
 
@@ -208,7 +232,10 @@ impl<'expr> RecursiveScanStrategy<'expr> {
             bytes_scanned += c.len_utf8();
         }
 
-        return if best_oper_pos == usize::MAX
-        { None } else { Some((best_operator_symbol, best_oper_pos)) };
+        return if best_oper_pos == usize::MAX {
+            None
+        } else {
+            Some((best_operator_symbol, best_oper_pos))
+        };
     }
 }

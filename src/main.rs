@@ -1,12 +1,12 @@
-use std::{io, thread};
-use std::panic::catch_unwind;
 use crate::calc_base::value::Value;
 use crate::calc_strategies::recursive_scan_strategy::RecursiveScanStrategy;
 use crate::calculator::Calculator;
+use std::panic::catch_unwind;
+use std::{io, thread};
 
 mod base;
-mod calc_strategies;
 mod calc_base;
+mod calc_strategies;
 mod calculator;
 
 fn main() {
@@ -39,8 +39,8 @@ fn main() {
                         } else {
                             sprintln!(result);
                         }
-                    },
-                    Err(err) => println!("Chyba: {}", err.get_msg()),
+                    }
+                    Err(err) => println!("Chyba: {}", err),
                 }
             }
             println!();
@@ -70,7 +70,10 @@ fn print_nice_header() {
     println!("|  \\| | ___ _   _  ___ __ _| | ___");
     println!("| . ` |/ _ \\ | | |/ __/ _` | |/ __|");
     println!("| |\\  |  __/ |_| | (_| (_| | | (__");
-    let lastline = format!("\\_| \\_/\\___|\\__,_|\\___\\__,_|_|\\___|  Verze {}, Martin Sebera 2023", env!("CARGO_PKG_VERSION"));
+    let lastline = format!(
+        "\\_| \\_/\\___|\\__,_|\\___\\__,_|_|\\___|  Verze {}, Martin Sebera 2023",
+        env!("CARGO_PKG_VERSION")
+    );
     sprintln!(lastline);
     sprintln!("━".repeat(lastline.chars().count())); // Posledni radek bude podtrzeny
     println!();
