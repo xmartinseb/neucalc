@@ -217,14 +217,14 @@ impl<'expr> RecursiveScanStrategy<'expr> {
                 } else if c == '(' {
                     curr_depth -= 1;
                 } else {
-                    let oper_priority = is_oper(c);
-                    if oper_priority > 0 // Když == 0, není to znak operátoru!
-                        && curr_depth == 0 // Operátor dělení výrazu nesmí být v závorkách!
+                    if let Some(oper_priority) = is_operator_get_priority(c) {
+                        if curr_depth == 0 // Operátor dělení výrazu nesmí být v závorkách!
                         && oper_priority < best_oper_priority
-                    {
-                        best_oper_priority = oper_priority;
-                        best_oper_pos = expr_bytes_len - bytes_scanned - 1;
-                        best_operator_symbol = c;
+                        {
+                            best_oper_priority = oper_priority;
+                            best_oper_pos = expr_bytes_len - bytes_scanned - 1;
+                            best_operator_symbol = c;
+                        }
                     }
                 }
             }

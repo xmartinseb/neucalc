@@ -2,15 +2,15 @@ use crate::base::CalcError;
 use crate::calc_base::expr::Expr;
 use crate::s;
 
-/// Pokud je symbol operátor, vrací jeho prioritu, jinak vrací 0
-pub fn is_oper(symbol: char) -> i32 {
+/// Pokud je symbol operátor, vrací jeho prioritu
+pub fn is_operator_get_priority(symbol: char) -> Option<i32> {
     match symbol {
-        '+' => 1,
-        '-' => 1,
-        '*' => 2,
-        '/' => 2,
-        '^' => 3,
-        _ => 0,
+        '+' => Some(1),
+        '-' => Some(1),
+        '*' => Some(2),
+        '/' => Some(2),
+        '^' => Some(3),
+        _ => None, // není to znak operátoru
     }
 }
 
