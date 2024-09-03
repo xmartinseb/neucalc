@@ -84,6 +84,7 @@ fn value_is_string_literal(expr: &str) -> Option<&str> {
 }
 
 impl Value {
+    #[allow(unused)]
     pub fn as_real(&self) -> Result<f64, CalcError> {
         match self {
             Value::Nothing => Err(CalcError::EvaluateErr(s!(

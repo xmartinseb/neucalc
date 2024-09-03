@@ -100,14 +100,14 @@ impl Rational {
         }
     }
 
-    pub fn pow_bigint(&self, exponent: BigInt) -> Result<Rational, CalcError> {
-        match exponent.to_i64() {
-            None => Err(CalcError::EvaluateErr(s!(
-                "Mocnění velkých čísel není povoleno"
-            ))),
-            Some(i) => Ok(self.pow_int(i)),
-        }
-    }
+    // pub fn pow_bigint(&self, exponent: BigInt) -> Result<Rational, CalcError> {
+    //     match exponent.to_i64() {
+    //         None => Err(CalcError::EvaluateErr(s!(
+    //             "Mocnění velkých čísel není povoleno"
+    //         ))),
+    //         Some(i) => Ok(self.pow_int(i)),
+    //     }
+    // }
 }
 
 /// Každé číslo napsané posloupností číslic je racionální, např. -52.464864686

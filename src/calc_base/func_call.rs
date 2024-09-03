@@ -15,9 +15,10 @@ impl FuncCall {
             params,
         }
     }
-    pub fn name(&self) -> &str {
-        self.name.as_str()
-    }
+
+    // pub fn name(&self) -> &str {
+    //     self.name.as_str()
+    // }
 
     /// Najde funkci s daným názvem a zavolá ji. Pokud funkce neexistuje, nebo se
     /// nepovede výpočet, vrátí chybu.
@@ -137,9 +138,9 @@ impl FuncCall {
         }
     }
 
-    pub fn params_as_string(&self) -> String {
-        let params_as_strings: Vec<_> = self.params.iter().map(|val| val.to_string()).collect();
-        let joined = params_as_strings.join(", ");
-        joined
-    }
+    // pub fn params_as_string(&self) -> String {
+    //     let params_as_strings: Vec<_> = self.params.iter().map(|val| val.to_string()).collect();
+    //     let joined = params_as_strings.join(", ");
+    //     joined
+    // }
 }

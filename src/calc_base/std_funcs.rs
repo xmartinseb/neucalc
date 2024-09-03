@@ -3,7 +3,6 @@ use crate::calc_base::rational::Rational;
 use crate::calc_base::value::Value;
 use crate::{rat, s};
 use num_bigint::BigInt;
-use num_integer::Roots;
 use num_traits::FromPrimitive;
 use num_traits::{Signed, ToPrimitive};
 
@@ -248,6 +247,25 @@ pub fn sin(rads: Value) -> Result<Value, CalcError> {
 /// Sinus - radiány. Do parametru se ale nemusí dosazovat iracionální koeficient pí.
 /// Pomáhá to udržet přesnost. Např. pi/2 se nedá reprezentovat přesně, ale 1/2 ano.
 pub fn sinpi(rads_pi: Value) -> Result<Value, CalcError> {
+    fn sinpi_err() -> CalcError {
+        CalcError::FuncCallErr(
+            "Funkce sinpi vyžaduje jako parametr: int, bigint, nebo rational".into(),
+        )
+    }
+
+    match rads_pi {
+        Value::Nothing => Err(sinpi_err()),
+        Value::Integer(i) => sinpi_rat(Rational::new(i, 1)),
+        Value::BigInt(bi) => sinpi_rat(Rational::from_bigint(bi)),
+        Value::Rational(r) => sinpi_rat(r),
+        Value::Real(_) => Err(sinpi_err()),
+        Value::Text(_) => Err(sinpi_err()),
+        Value::Bool(_) => Err(sinpi_err()),
+    }
+}
+
+fn sinpi_rat(rat: Rational) -> Result<Value, CalcError> {
+    let rat = rat.reduce_move();
     todo!()
 }
 

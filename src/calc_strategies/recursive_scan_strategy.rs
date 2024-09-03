@@ -24,7 +24,7 @@ impl<'expr> ICalculatorStrategy<'expr> for RecursiveScanStrategy<'expr> {
     }
 
     fn evaluate(&mut self) -> Result<Value, CalcError> {
-        self.evaluate_rec_simplify(self.math_expr.dupl())
+        self.evaluate_rec_simplify(self.math_expr.clone())
     }
 
     fn parse_func_call(&self, expr: Expr) -> Result<FuncCall, CalcError> {
@@ -74,7 +74,7 @@ impl<'expr> RecursiveScanStrategy<'expr> {
         let mut params = Vec::<Value>::new();
         if delims.len() == 0 {
             // Parametr je jen jeden, neni potreba nic trhat. Cely string je jeden parametr
-            params.push(parse_param(self, params_str.dupl())?);
+            params.push(parse_param(self, params_str.clone())?);
         } else {
             // Pamateru je vic, string se musi rozthrat
             let mut last_substring_begin = 0usize;
@@ -109,10 +109,10 @@ impl<'expr> RecursiveScanStrategy<'expr> {
     /// Používá se k rekurzivnímu vyhodnocení výrazu.
     fn evaluate_rec(&self, expr: Expr) -> Result<Value, CalcError> {
         let expr = trim_brackets(expr);
-        match Self::find_oper(expr.dupl()) {
+        match Self::find_oper(expr.clone()) {
             None => {
                 // Není-li ve výrazu dělící operátor, pak to bude buď volání funkce, nebo atomická hodnota
-                return if let Ok(func_call) = self.parse_func_call(expr.dupl()) {
+                return if let Ok(func_call) = self.parse_func_call(expr.clone()) {
                     func_call.eval()
                 } else {
                     Value::parse(expr.as_str())?.simplify_type_move()

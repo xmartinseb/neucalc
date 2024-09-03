@@ -17,10 +17,6 @@ impl<'expr> Expr<'expr> {
         self.expr
     }
 
-    pub fn dupl(&self) -> Self {
-        Expr::new(self.expr)
-    }
-
     pub fn is_empty(&self) -> bool {
         self.expr.is_empty()
     }
@@ -33,5 +29,11 @@ impl<'expr> Expr<'expr> {
 impl<'expr> Default for Expr<'expr> {
     fn default() -> Self {
         Expr::new("")
+    }
+}
+
+impl<'expr> Clone for Expr<'expr> {
+    fn clone(&self) -> Self {
+        Self::new(self.expr)
     }
 }

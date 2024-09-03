@@ -6,9 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-num-bigint = { version = "0.4.4", features = [] }
-num-integer = "0.1.45"
-lazy_static = "1.4.0"
-num-traits = "0.2.16"
-regex = "1.9.6"
+num-bigint = { version = "0.4.6", features = [] }
+num-integer = "0.1.46"
+lazy_static = "1.5.0"
+num-traits = "0.2.19"
+regex = "1.10.6"
 thiserror = "*"
