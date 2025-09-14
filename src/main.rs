@@ -1,8 +1,8 @@
 use crate::calc_base::value::Value;
 use crate::calc_strategies::recursive_scan_strategy::RecursiveScanStrategy;
 use crate::calculator::Calculator;
+use std::io;
 use std::panic::catch_unwind;
-use std::{io, thread};
 
 mod base;
 mod calc_base;
@@ -10,7 +10,7 @@ mod calc_strategies;
 mod calculator;
 
 fn main() {
-    print_nice_header();
+    print_header();
     let calculator = Calculator::<RecursiveScanStrategy>::default();
     let stdin = io::stdin();
 
@@ -64,17 +64,9 @@ fn main() {
 }
 
 /// Vytiskne logo programu Neucalc a přidá autorský podpis a číslo verze.
-fn print_nice_header() {
-    println!(" _   _                      _");
-    println!("| \\ | |                    | |");
-    println!("|  \\| | ___ _   _  ___ __ _| | ___");
-    println!("| . ` |/ _ \\ | | |/ __/ _` | |/ __|");
-    println!("| |\\  |  __/ |_| | (_| (_| | | (__");
-    let lastline = format!(
-        "\\_| \\_/\\___|\\__,_|\\___\\__,_|_|\\___|  Verze {}, Martin Sebera 2023",
-        env!("CARGO_PKG_VERSION")
-    );
-    sprintln!(lastline);
-    sprintln!("━".repeat(lastline.chars().count())); // Posledni radek bude podtrzeny
+fn print_header() {
+    let app_info = format!("Verze {}, Martin Sebera 2025", env!("CARGO_PKG_VERSION"));
+    sprintln!(app_info);
+    sprintln!("━".repeat(app_info.chars().count())); // Posledni radek bude podtrzeny
     println!();
 }
