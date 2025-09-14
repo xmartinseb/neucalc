@@ -65,7 +65,10 @@ fn main() {
 
 /// Vytiskne logo programu Neucalc a přidá autorský podpis a číslo verze.
 fn print_header() {
-    let app_info = format!("Verze {}, Martin Sebera 2025", env!("CARGO_PKG_VERSION"));
+    let app_info = format!(
+        "Neucalc - verze {}, Martin Sebera 2025",
+        env!("CARGO_PKG_VERSION")
+    );
     sprintln!(app_info);
     sprintln!("━".repeat(app_info.chars().count())); // Posledni radek bude podtrzeny
     println!();
