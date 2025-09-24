@@ -1,16 +1,12 @@
-use std::clone;
-use std::cmp::Ordering;
-use std::f64::consts::PI;
-use std::ops::Mul;
-
 use crate::base::CalcError;
 use crate::calc_base::rational::Rational;
 use crate::calc_base::value::Value;
 use crate::{rat, s};
-use lazy_static::lazy_static;
 use num_bigint::BigInt;
-use num_traits::{FromPrimitive, One};
+use num_traits::{FromPrimitive, One, Zero};
 use num_traits::{Signed, ToPrimitive};
+use std::cmp::Ordering;
+use std::f64::consts::PI;
 
 pub fn ln(x: Value) -> Result<Value, CalcError> {
     // let real = x.as_real()?;
@@ -403,12 +399,12 @@ pub fn cista_mzda(hruba: Value) -> Result<Value, CalcError> {
         Value::Nothing => Err(CalcError::FuncCallErr(s!(
             "cista(Nothing) není platné volání funkce"
         ))),
-        Value::Integer(int) => Ok(Value::Rational(cista_mzda_impl(Rational::new(int, 1)))),
+        Value::Integer(int) => Ok(Value::Rational(cista_mzda_impl(Rational::new(int, 1))?)),
         Value::BigInt(big_int) => Ok(Value::Rational(cista_mzda_impl(Rational {
             numerator: big_int,
             denominator: BigInt::one(),
-        }))),
-        Value::Rational(rational) => Ok(Value::Rational(cista_mzda_impl(rational))),
+        })?)),
+        Value::Rational(rational) => Ok(Value::Rational(cista_mzda_impl(rational)?)),
         Value::Real(_) => Err(CalcError::FuncCallErr(s!(
             "cista(Real) není platné volání funkce"
         ))),
@@ -421,7 +417,13 @@ pub fn cista_mzda(hruba: Value) -> Result<Value, CalcError> {
     }
 }
 
-fn cista_mzda_impl(hruba: Rational) -> Rational {
+fn cista_mzda_impl(hruba: Rational) -> Result<Rational, CalcError> {
+    if hruba.is_negative() || hruba.numerator == BigInt::zero() {
+        return Err(CalcError::FuncCallErr(s!(
+            "Funkce 'cista' nemůže spočítat čistou mzdu ze záporného čísla ani z nuly"
+        )));
+    }
+
     // sazby pojistného
     let r0075 = Rational::new(75, 1000);
     let r0045 = Rational::new(45, 1000);
@@ -441,7 +443,7 @@ fn cista_mzda_impl(hruba: Rational) -> Rational {
 
     // daň před slevami
     let dan: Rational;
-    if compare_positive_rats(hruba.clone(), hranice_23.clone()) != Ordering::Greater {
+    if compare_positive_rationals(hruba.clone(), hranice_23.clone()) != Ordering::Greater {
         dan = r015 * dz;
     } else {
         dan = r015 * hranice_23.clone() + r023 * (dz - hranice_23.clone());
@@ -455,10 +457,10 @@ fn cista_mzda_impl(hruba: Rational) -> Rational {
     }
 
     // čistá mzda
-    hruba - sp - zp - dan_po_sleve
+    Ok(hruba - sp - zp - dan_po_sleve)
 }
 
-fn compare_positive_rats(a: Rational, b: Rational) -> Ordering {
+fn compare_positive_rationals(a: Rational, b: Rational) -> Ordering {
     assert!(a.numerator > Default::default());
     assert!(b.numerator > Default::default());
     assert!(a.denominator > Default::default());
