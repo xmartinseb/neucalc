@@ -54,4 +54,7 @@ pub enum CalcError {
 
     #[error("Nepodařilo se převést text na BigInt.")]
     ParseBigIntErr(#[source] <BigInt as FromStr>::Err),
+
+    #[error("Nepodařilo se převést hodnotu na typ double.")]
+    ConvertToDoubleErr,
 }

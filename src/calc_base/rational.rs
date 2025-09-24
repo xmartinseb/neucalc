@@ -9,7 +9,7 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 use std::str::FromStr;
 
 // Racionální číslo (zlomek) je chápáno jako dvojice celých čísel. Proto je počítání s ním dokonale přesné.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Rational {
     pub numerator: BigInt,
     pub denominator: BigInt,

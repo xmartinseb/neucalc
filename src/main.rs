@@ -23,6 +23,8 @@ fn main() {
                 println!("Chyba při čtení vstupu z konzole: {:?}", e);
                 return false;
             }
+            remove_comment_trim(&mut input);
+
             if input.trim().is_empty() {
                 return false;
             } else {
@@ -60,6 +62,12 @@ fn main() {
                 return; // Konec z důvodu závažné chyby v programu
             }
         }
+    }
+}
+
+fn remove_comment_trim(input: &mut String) {
+    if let Some(comment_pos) = input.find("//") {
+        *input = input[..comment_pos].trim().to_string();
     }
 }
 

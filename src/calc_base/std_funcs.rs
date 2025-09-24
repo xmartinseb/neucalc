@@ -1,9 +1,13 @@
+use std::clone;
+use std::f64::consts::PI;
+
 use crate::base::CalcError;
 use crate::calc_base::rational::Rational;
 use crate::calc_base::value::Value;
 use crate::{rat, s};
+use lazy_static::lazy_static;
 use num_bigint::BigInt;
-use num_traits::FromPrimitive;
+use num_traits::{FromPrimitive, One};
 use num_traits::{Signed, ToPrimitive};
 
 pub fn ln(x: Value) -> Result<Value, CalcError> {
@@ -249,7 +253,7 @@ pub fn sin(rads: Value) -> Result<Value, CalcError> {
 pub fn sinpi(rads_pi: Value) -> Result<Value, CalcError> {
     fn sinpi_err() -> CalcError {
         CalcError::FuncCallErr(
-            "Funkce sinpi vyžaduje jako parametr: int, bigint, nebo rational".into(),
+            "Funkce sinpi vyžaduje jako parametr: int, bigint, real, nebo rational".into(),
         )
     }
 
@@ -258,15 +262,32 @@ pub fn sinpi(rads_pi: Value) -> Result<Value, CalcError> {
         Value::Integer(i) => sinpi_rat(Rational::new(i, 1)),
         Value::BigInt(bi) => sinpi_rat(Rational::from_bigint(bi)),
         Value::Rational(r) => sinpi_rat(r),
-        Value::Real(_) => Err(sinpi_err()),
+        Value::Real(re) => Ok(Value::Real((re * PI).sin())),
         Value::Text(_) => Err(sinpi_err()),
         Value::Bool(_) => Err(sinpi_err()),
     }
 }
 
 fn sinpi_rat(rat: Rational) -> Result<Value, CalcError> {
-    let rat = rat.reduce_move();
     todo!()
+    // let rat = rat.reduce_move();
+
+    // if rat == Rational::new(1, 6) {
+    //     Ok(rat!(1 / 2))
+    // } else if rat == Rational::new(1, 2) {
+    //     Ok(Value::Integer(1))
+    // } else if rat == Rational::new(3, 2) {
+    //     Ok(Value::Integer(-1))
+    // } else if rat.denominator == BigInt::one() {
+    //     let a = rat.numerator % 2;
+    //     if (a == BigInt::ZERO) {
+    //         Ok(Value::Integer(1))
+    //     } else if (a == BigInt::one()) {
+    //     }
+    // } else {
+    //     let re = rat.to_real().ok_or(CalcError::ConvertToDoubleErr)?;
+    //     Ok(Value::Real((re * PI).sin()))
+    // }
 }
 
 /// Sinus - stupně
