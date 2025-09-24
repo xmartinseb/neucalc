@@ -2,7 +2,7 @@ use crate::base::CalcError;
 use crate::s;
 use num_bigint::BigInt;
 use num_integer::Integer;
-use num_traits::{Signed, ToPrimitive};
+use num_traits::{Signed, ToPrimitive, Zero};
 use regex::*;
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Add, Div, Mul, Neg, Sub};
@@ -16,11 +16,20 @@ pub struct Rational {
 }
 
 impl Rational {
+    pub fn zero() -> Rational {
+        Rational::new(0, 1)
+    }
+
     pub fn abs(&self) -> Rational {
         Rational {
             numerator: self.numerator.abs(),
             denominator: self.denominator.abs(),
         }
+    }
+
+    pub fn is_negative(&self) -> bool {
+        let z = BigInt::zero();
+        self.numerator < z || self.denominator < z && !(self.numerator < z && self.denominator < z)
     }
 
     pub fn to_real(&self) -> Option<f64> {
@@ -41,7 +50,12 @@ impl Rational {
         }
     }
 
-    pub fn new(numerator: i64, denominator: i64) -> Rational {
+    pub fn new(mut numerator: i64, mut denominator: i64) -> Rational {
+        if numerator < 0 && denominator < 0 {
+            numerator = -numerator;
+            denominator = -denominator;
+        }
+
         Rational {
             numerator: BigInt::from(numerator),
             denominator: BigInt::from(denominator),
@@ -99,15 +113,6 @@ impl Rational {
             .reduce_move()
         }
     }
-
-    // pub fn pow_bigint(&self, exponent: BigInt) -> Result<Rational, CalcError> {
-    //     match exponent.to_i64() {
-    //         None => Err(CalcError::EvaluateErr(s!(
-    //             "Mocnění velkých čísel není povoleno"
-    //         ))),
-    //         Some(i) => Ok(self.pow_int(i)),
-    //     }
-    // }
 }
 
 /// Každé číslo napsané posloupností číslic je racionální, např. -52.464864686

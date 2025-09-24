@@ -131,6 +131,16 @@ impl FuncCall {
                     )))
                 }
             }
+            "cista" => {
+                if self.params.len() == 1 {
+                    std_funcs::cista_mzda(self.params[0].clone())
+                } else {
+                    Err(CalcError::FuncCallErr(format!(
+                        "Funkce '{}' vyžaduje 1 parametr",
+                        self.name
+                    )))
+                }
+            }
             _ => Err(CalcError::FuncCallErr(format!(
                 "Funkce '{}' není definována",
                 self.name

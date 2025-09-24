@@ -1,5 +1,7 @@
 use std::clone;
+use std::cmp::Ordering;
 use std::f64::consts::PI;
+use std::ops::Mul;
 
 use crate::base::CalcError;
 use crate::calc_base::rational::Rational;
@@ -394,4 +396,75 @@ pub fn sqrt(val: Value) -> Result<Value, CalcError> {
             "sqrt(Bool) není platné volání funkce"
         ))),
     };
+}
+
+pub fn cista_mzda(hruba: Value) -> Result<Value, CalcError> {
+    match hruba {
+        Value::Nothing => Err(CalcError::FuncCallErr(s!(
+            "cista(Nothing) není platné volání funkce"
+        ))),
+        Value::Integer(int) => Ok(Value::Rational(cista_mzda_impl(Rational::new(int, 1)))),
+        Value::BigInt(big_int) => Ok(Value::Rational(cista_mzda_impl(Rational {
+            numerator: big_int,
+            denominator: BigInt::one(),
+        }))),
+        Value::Rational(rational) => Ok(Value::Rational(cista_mzda_impl(rational))),
+        Value::Real(_) => Err(CalcError::FuncCallErr(s!(
+            "cista(Real) není platné volání funkce"
+        ))),
+        Value::Text(_) => Err(CalcError::FuncCallErr(s!(
+            "cista(Text) není platné volání funkce"
+        ))),
+        Value::Bool(_) => Err(CalcError::FuncCallErr(s!(
+            "cista(Bool) není platné volání funkce"
+        ))),
+    }
+}
+
+fn cista_mzda_impl(hruba: Rational) -> Rational {
+    // sazby pojistného
+    let r0075 = Rational::new(75, 1000);
+    let r0045 = Rational::new(45, 1000);
+    let r015 = Rational::new(15, 100);
+    let r023 = Rational::new(23, 100);
+
+    let sp = r0075 * hruba.clone(); // sociální
+    let zp = r0045 * hruba.clone(); // zdravotní
+
+    // daňový základ = hrubá mzda zaokrouhlená na stovky nahoru
+    let dz =
+        ((hruba.to_real().expect("Selhal převod hodnoty na f64") / 100.0).ceil() * 100.0) as i64;
+    let dz = Rational::new(dz, 1);
+
+    // hranice pro 23% daň (měsíčně, 2025 ~161 000 Kč)
+    let hranice_23 = Rational::new(161000, 1);
+
+    // daň před slevami
+    let dan: Rational;
+    if compare_positive_rats(hruba.clone(), hranice_23.clone()) != Ordering::Greater {
+        dan = r015 * dz;
+    } else {
+        dan = r015 * hranice_23.clone() + r023 * (dz - hranice_23.clone());
+    }
+
+    // sleva na poplatníka (měsíční)
+    let sleva = Rational::new(2570, 1);
+    let mut dan_po_sleve = dan - sleva;
+    if dan_po_sleve.is_negative() {
+        dan_po_sleve = Rational::zero();
+    }
+
+    // čistá mzda
+    hruba - sp - zp - dan_po_sleve
+}
+
+fn compare_positive_rats(a: Rational, b: Rational) -> Ordering {
+    assert!(a.numerator > Default::default());
+    assert!(b.numerator > Default::default());
+    assert!(a.denominator > Default::default());
+    assert!(b.denominator > Default::default());
+
+    let left = a.numerator * b.denominator;
+    let right = b.numerator * a.denominator;
+    return left.cmp(&right);
 }
